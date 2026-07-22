@@ -810,17 +810,30 @@ export function EventDetailPage() {
                                 </a>
                               ))}
                               {showLapByLapExport && (
-                                <a
-                                  className="btn btn-ghost btn-sm"
-                                  href={api.exportUrl(event.id, test.id, "pdf-vueltas", {
-                                    from: test.fromPointId || points[0]?.id,
-                                    to: test.toPointId || points[1]?.id,
-                                    partId: lapExportPartId,
-                                  })}
-                                  title="PDF con el tiempo de cada vuelta por piloto"
-                                >
-                                  Vuelta a vuelta
-                                </a>
+                                <>
+                                  <a
+                                    className="btn btn-ghost btn-sm"
+                                    href={api.exportUrl(event.id, test.id, "pdf-vueltas", {
+                                      from: test.fromPointId || points[0]?.id,
+                                      to: test.toPointId || points[1]?.id,
+                                      partId: lapExportPartId,
+                                    })}
+                                    title="PDF con el tiempo de cada vuelta por piloto"
+                                  >
+                                    Vuelta a vuelta
+                                  </a>
+                                  <a
+                                    className="btn btn-ghost btn-sm"
+                                    href={api.exportUrl(event.id, test.id, "pdf-vueltas-horas", {
+                                      from: test.fromPointId || points[0]?.id,
+                                      to: test.toPointId || points[1]?.id,
+                                      partId: lapExportPartId,
+                                    })}
+                                    title="PDF con tiempo de vuelta y hora de paso (Tm de pasos)"
+                                  >
+                                    Vuelta a vuelta con horas
+                                  </a>
+                                </>
                               )}
                             </div>
                             <div className="table-wrap results-table-wrap">

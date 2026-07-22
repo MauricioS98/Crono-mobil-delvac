@@ -174,19 +174,25 @@ export interface LapByLapRow {
   category: string;
   league: string;
   lapTimesFormatted: string[];
+  lapClockTimesFormatted: string[];
   lapsCompleted: number;
   expectedLaps: number | null;
   totalTimeFormatted: string;
   totalTimeMs: number;
 }
 
-function lapTimesListByPilot(parsed: ParsedCsv): Map<string, number[]> {
-  const map = new Map<string, number[]>();
+function lapDetailsByPilot(
+  parsed: ParsedCsv
+): Map<string, { lapTimeFormatted: string; clockFormatted: string }[]> {
+  const map = new Map<string, { lapTimeFormatted: string; clockFormatted: string }[]>();
   for (const p of parsed.racePassages) {
     if (p.lapTimeMs == null || p.lapTimeMs <= 0) continue;
     const key = normalizeNumber(p.number);
     if (!map.has(key)) map.set(key, []);
-    map.get(key)!.push(p.lapTimeMs);
+    map.get(key)!.push({
+      lapTimeFormatted: formatMs(p.lapTimeMs),
+      clockFormatted: p.tmPasosRaw?.trim() || formatMs(p.tmPasosMs, true),
+    });
   }
   return map;
 }
@@ -213,12 +219,12 @@ export function computeLapByLapResults(
 
   const pilots = event.pilots || [];
   const summary = lapResultsByPilot(slot.parsed);
-  const lapLists = lapTimesListByPilot(slot.parsed);
+  const lapDetails = lapDetailsByPilot(slot.parsed);
   const expected = part.expectedLaps ?? null;
 
   let rows: LapByLapRow[] = [];
   for (const [key, s] of summary) {
-    const lapMs = lapLists.get(key) || [];
+    const details = lapDetails.get(key) || [];
     const pilot = pilots.find((p) => normalizeNumber(p.number) === key);
     rows.push({
       position: 0,
@@ -226,7 +232,8 @@ export function computeLapByLapResults(
       name: pilot?.name || s.name,
       category: pilot?.category || "",
       league: pilot?.league || "",
-      lapTimesFormatted: lapMs.map((ms) => formatMs(ms)),
+      lapTimesFormatted: details.map((d) => d.lapTimeFormatted),
+      lapClockTimesFormatted: details.map((d) => d.clockFormatted),
       lapsCompleted: s.laps,
       expectedLaps: expected,
       totalTimeFormatted: formatMs(s.totalTimeMs),

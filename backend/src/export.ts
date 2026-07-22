@@ -615,6 +615,271 @@ export async function lapByLapToPdf(
   });
 }
 
+function pdfStackedCellHeight(
+  doc: PDFKit.PDFDocument,
+  top: string,
+  bottom: string,
+  colWidth: number,
+  topSize: number,
+  bottomSize: number
+): number {
+  const innerW = Math.max(colWidth - 4, 8);
+  doc.fontSize(topSize);
+  const h1 = doc.heightOfString(top || "—", { width: innerW });
+  if (!bottom) return h1;
+  doc.fontSize(bottomSize);
+  return h1 + 2 + doc.heightOfString(bottom, { width: innerW });
+}
+
+function pdfDrawStackedCell(
+  doc: PDFKit.PDFDocument,
+  top: string,
+  bottom: string,
+  x: number,
+  y: number,
+  colWidth: number,
+  topSize: number,
+  bottomSize: number
+) {
+  const prevY = doc.y;
+  const innerW = Math.max(colWidth - 4, 8);
+  doc.fontSize(topSize).text(top || "—", x, y + 2, { width: innerW, lineBreak: false });
+  if (bottom) {
+    doc.fillColor("#555555")
+      .fontSize(bottomSize)
+      .text(bottom, x, y + 2 + topSize + 1, { width: innerW, lineBreak: false });
+    doc.fillColor("#1A1A1A");
+  }
+  doc.y = prevY;
+}
+
+type LapHoursLapCol = { index: number; w: number };
+
+export async function lapByLapWithHoursToPdf(
+  rows: LapByLapRow[],
+  maxLaps: number,
+  title: string,
+  event: Event,
+  test?: Test | null
+): Promise<Buffer> {
+  return new Promise((resolve, reject) => {
+    const FOOTER_H = 40;
+
+    const doc = new PDFDocument({
+      size: "A4",
+      layout: "landscape",
+      margins: { top: 32, bottom: FOOTER_H + 8, left: 28, right: 28 },
+      bufferPages: true,
+      info: { Title: title, Author: "GPMD Cronometraje" },
+    });
+    const chunks: Buffer[] = [];
+    doc.on("data", (c) => chunks.push(c));
+    doc.on("end", () => resolve(Buffer.concat(chunks)));
+    doc.on("error", reject);
+
+    const left = doc.page.margins.left;
+    const pageWidth = doc.page.width - left - doc.page.margins.right;
+    const contentBottom = () => doc.page.height - doc.page.margins.bottom;
+    let y = doc.page.margins.top;
+
+    const headerPath = event.headerImage
+      ? path.isAbsolute(event.headerImage)
+        ? event.headerImage
+        : path.join(HEADERS_DIR, path.basename(event.headerImage))
+      : findHeaderImage(event.id);
+
+    if (headerPath && fs.existsSync(headerPath)) {
+      try {
+        doc.image(headerPath, left, y, { fit: [pageWidth, 60], align: "center" });
+        y += 68;
+      } catch {
+        // ignore
+      }
+    }
+
+    doc.fillColor("#0B3D2E").fontSize(16).font("Helvetica-Bold");
+    pdfText(doc, event.name, left, y, { width: pageWidth, align: "center", lineBreak: true });
+    y = doc.y + 3;
+
+    doc.fillColor("#555555").fontSize(10).font("Helvetica");
+    pdfText(doc, title, left, y, { width: pageWidth, align: "center", lineBreak: true });
+    y = doc.y + 2;
+
+    if (event.date || event.location) {
+      doc.fillColor("#777777").fontSize(8);
+      pdfText(doc, [event.date, event.location].filter(Boolean).join(" · "), left, y, {
+        width: pageWidth,
+        align: "center",
+        lineBreak: true,
+      });
+      y = doc.y + 2;
+    }
+
+    y += 8;
+    doc.moveTo(left, y).lineTo(left + pageWidth, y).strokeColor("#0B3D2E").lineWidth(1.5).stroke();
+    y += 8;
+
+    const fixedBase = [
+      { label: "Pos", w: 24 },
+      { label: "N°", w: 30 },
+      { label: "Nombre", w: 88 },
+    ];
+    const lapBaseW = 62;
+    const tailBase = [
+      { label: "Vueltas", w: 38 },
+      { label: "Total", w: 48 },
+    ];
+    const lapCols: LapHoursLapCol[] = Array.from({ length: maxLaps }, (_, i) => ({
+      index: i,
+      w: lapBaseW,
+    }));
+
+    const totalW =
+      fixedBase.reduce((s, c) => s + c.w, 0) +
+      lapCols.reduce((s, c) => s + c.w, 0) +
+      tailBase.reduce((s, c) => s + c.w, 0);
+    const scale = pageWidth / totalW;
+
+    const fixedCols = fixedBase.map((c) => ({ ...c, w: c.w * scale }));
+    const scaledLapCols = lapCols.map((c) => ({ ...c, w: c.w * scale }));
+    const tailCols = tailBase.map((c) => ({ ...c, w: c.w * scale }));
+
+    const fontSize = 7;
+    const clockFontSize = 6;
+    const tableHeaderH = 24;
+
+    const drawTableHeader = (yy: number) => {
+      doc.rect(left, yy, pageWidth, tableHeaderH).fill("#0B3D2E");
+      let x = left + 2;
+      doc.fillColor("#FFFFFF").fontSize(fontSize).font("Helvetica-Bold");
+
+      for (const c of fixedCols) {
+        pdfText(doc, c.label, x, yy + 8, { width: c.w - 3 });
+        x += c.w;
+      }
+      for (const c of scaledLapCols) {
+        pdfText(doc, `V${c.index + 1}`, x, yy + 3, { width: c.w - 3 });
+        doc.font("Helvetica").fontSize(clockFontSize);
+        pdfText(doc, "T / Hora", x, yy + 13, { width: c.w - 3 });
+        doc.font("Helvetica-Bold").fontSize(fontSize);
+        x += c.w;
+      }
+      for (const c of tailCols) {
+        pdfText(doc, c.label, x, yy + 8, { width: c.w - 3 });
+        x += c.w;
+      }
+      return yy + tableHeaderH + 2;
+    };
+
+    y = drawTableHeader(y);
+
+    const drawFooterOnCurrentPage = (pageLabel: number) => {
+      const prevBottom = doc.page.margins.bottom;
+      doc.page.margins.bottom = 0;
+      const fy = doc.page.height - 28;
+      doc
+        .moveTo(left, fy - 8)
+        .lineTo(left + pageWidth, fy - 8)
+        .strokeColor("#CCCCCC")
+        .lineWidth(0.5)
+        .stroke();
+      doc.fillColor("#888888").fontSize(8).font("Helvetica");
+      pdfText(doc, event.footerText || "Gran Premio Mobil Delvac · Cronometraje GPMD", left, fy, {
+        width: pageWidth * 0.7,
+        align: "left",
+      });
+      pdfText(doc, `Pág. ${pageLabel}`, left, fy, { width: pageWidth, align: "right" });
+      doc.page.margins.bottom = prevBottom;
+    };
+
+    for (let i = 0; i < rows.length; i++) {
+      const r = rows[i];
+      const rowFont = r.position <= 3 ? "Helvetica-Bold" : "Helvetica";
+
+      let maxH = PDF_MIN_ROW_H - PDF_ROW_PAD;
+      doc.font(rowFont);
+      for (const c of fixedCols) {
+        const val =
+          c.label === "Pos"
+            ? String(r.position)
+            : c.label === "N°"
+              ? r.number
+              : r.name || "—";
+        maxH = Math.max(maxH, pdfWrappedHeight(doc, val, c.w, fontSize, rowFont));
+      }
+      for (const c of scaledLapCols) {
+        maxH = Math.max(
+          maxH,
+          pdfStackedCellHeight(
+            doc,
+            r.lapTimesFormatted[c.index] || "—",
+            r.lapClockTimesFormatted[c.index] || "",
+            c.w,
+            fontSize,
+            clockFontSize
+          )
+        );
+      }
+      const vueltasVal =
+        r.expectedLaps != null ? `${r.lapsCompleted}/${r.expectedLaps}` : String(r.lapsCompleted);
+      maxH = Math.max(maxH, pdfWrappedHeight(doc, vueltasVal, tailCols[0].w, fontSize, rowFont));
+      maxH = Math.max(maxH, pdfWrappedHeight(doc, r.totalTimeFormatted, tailCols[1].w, fontSize, rowFont));
+
+      const rowH = Math.max(PDF_MIN_ROW_H, maxH) + PDF_ROW_PAD;
+
+      if (y + rowH > contentBottom()) {
+        doc.addPage();
+        y = doc.page.margins.top;
+        y = drawTableHeader(y);
+      }
+
+      if (i % 2 === 0) {
+        doc.rect(left, y - 1, pageWidth, rowH).fill("#F3F7F5");
+      }
+
+      let x = left + 2;
+      doc.fillColor("#1A1A1A").font(rowFont).fontSize(fontSize);
+
+      for (const c of fixedCols) {
+        const val =
+          c.label === "Pos"
+            ? String(r.position)
+            : c.label === "N°"
+              ? r.number
+              : r.name || "—";
+        pdfDrawCell(doc, val, x, y, c.w);
+        x += c.w;
+      }
+      for (const c of scaledLapCols) {
+        pdfDrawStackedCell(
+          doc,
+          r.lapTimesFormatted[c.index] || "—",
+          r.lapClockTimesFormatted[c.index] || "",
+          x,
+          y,
+          c.w,
+          fontSize,
+          clockFontSize
+        );
+        x += c.w;
+      }
+      pdfDrawCell(doc, vueltasVal, x, y, tailCols[0].w);
+      x += tailCols[0].w;
+      pdfDrawCell(doc, r.totalTimeFormatted, x, y, tailCols[1].w);
+
+      y += rowH;
+    }
+
+    const range = doc.bufferedPageRange();
+    for (let i = 0; i < range.count; i++) {
+      doc.switchToPage(range.start + i);
+      drawFooterOnCurrentPage(i + 1);
+    }
+
+    doc.end();
+  });
+}
+
 function fusionTestHeaders(tests: FusionTestMeta[]): string[] {
   return tests.map((t) => `${t.name} (${t.segmentLabel})`);
 }
