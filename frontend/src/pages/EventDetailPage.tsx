@@ -33,11 +33,24 @@ export function EventDetailPage() {
   const [expandedTests, setExpandedTests] = useState<Record<string, boolean>>({});
   const [partByTest, setPartByTest] = useState<Record<string, string | null>>({});
   const [resultsByTest, setResultsByTest] = useState<
-    Record<string, { rows: ResultRow[]; title: string; warning: string; partId?: string }>
+    Record<
+      string,
+      {
+        rows: ResultRow[];
+        title: string;
+        warning: string;
+        partId?: string;
+        scope: string;
+      }
+    >
   >({});
   const [fromId, setFromId] = useState("");
   const [toId, setToId] = useState("");
   const [offsetDrafts, setOffsetDrafts] = useState<Record<string, string>>({});
+  const [penaltyDrafts, setPenaltyDrafts] = useState<
+    Record<string, { timePenalty: string; positionPenalty: string; comment: string }>
+  >({});
+  const [savingPenalty, setSavingPenalty] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     if (!id) return;
@@ -83,10 +96,46 @@ export function EventDetailPage() {
           title: data.title,
           warning: data.warning || "",
           partId: pid,
+          scope: data.scope,
         },
       }));
+      const drafts: Record<string, { timePenalty: string; positionPenalty: string; comment: string }> =
+        {};
+      for (const r of data.rows) {
+        const key = `${testId}:${data.scope}:${r.number}`;
+        drafts[key] = {
+          timePenalty: r.timePenaltyMs ? formatOffsetInput(r.timePenaltyMs).replace(/^00:/, "") : "",
+          positionPenalty: r.positionPenalty ? String(r.positionPenalty) : "",
+          comment: r.comment || "",
+        };
+      }
+      setPenaltyDrafts((prev) => ({ ...prev, ...drafts }));
     } catch (e) {
       setError(e instanceof Error ? e.message : "Error al calcular resultados");
+    }
+  };
+
+  const saveRowPenalty = async (testId: string, scope: string, number: string) => {
+    if (!event) return;
+    const key = `${testId}:${scope}:${number}`;
+    const draft = penaltyDrafts[key] || { timePenalty: "", positionPenalty: "", comment: "" };
+    setSavingPenalty(key);
+    setError("");
+    try {
+      await api.savePenalty(event.id, testId, {
+        number,
+        scope,
+        timePenalty: draft.timePenalty || "0",
+        positionPenalty: Number(draft.positionPenalty || 0),
+        comment: draft.comment,
+      });
+      const current = resultsByTest[testId];
+      await refreshResults(testId, current?.partId ?? null);
+      setMsg(`Penalización guardada para #${number}`);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Error al guardar penalización");
+    } finally {
+      setSavingPenalty(null);
     }
   };
 
@@ -613,8 +662,8 @@ export function EventDetailPage() {
                                 </a>
                               ))}
                             </div>
-                            <div className="table-wrap">
-                              <table>
+                            <div className="table-wrap results-table-wrap">
+                              <table className="results-table">
                                 <thead>
                                   <tr>
                                     <th>Pos</th>
@@ -623,31 +672,114 @@ export function EventDetailPage() {
                                     <th>Categoría</th>
                                     <th>Liga</th>
                                     <th>Tiempo</th>
-                                    <th>Parte</th>
+                                    <th>Salida</th>
+                                    <th>Pen. tiempo</th>
+                                    <th>Pen. pos</th>
+                                    <th>Comentario</th>
+                                    <th></th>
                                   </tr>
                                 </thead>
                                 <tbody>
-                                  {testResults.rows.map((r) => (
-                                    <tr key={`${r.number}-${r.partId || "u"}`}>
-                                      <td className={r.position <= 3 ? `pos-${r.position}` : ""}>
-                                        {r.position}
-                                      </td>
-                                      <td>{r.number}</td>
-                                      <td>
-                                        {r.name}
-                                        {r.missingPilot && (
-                                          <span className="badge-warn"> · sin ficha</span>
-                                        )}
-                                      </td>
-                                      <td>{r.category || "—"}</td>
-                                      <td>{r.league || "—"}</td>
-                                      <td className="time">{r.timeFormatted}</td>
-                                      <td>{r.partName || "—"}</td>
-                                    </tr>
-                                  ))}
+                                  {testResults.rows.map((r) => {
+                                    const pKey = `${test.id}:${testResults.scope}:${r.number}`;
+                                    const draft = penaltyDrafts[pKey] || {
+                                      timePenalty: "",
+                                      positionPenalty: "",
+                                      comment: "",
+                                    };
+                                    return (
+                                      <tr
+                                        key={`${r.number}-${r.partId || "u"}`}
+                                        className={r.hasPenalty ? "row-penalty" : ""}
+                                      >
+                                        <td className={r.position <= 3 ? `pos-${r.position}` : ""}>
+                                          {r.position}
+                                        </td>
+                                        <td>{r.number}</td>
+                                        <td>
+                                          {r.name || "—"}
+                                          {r.missingPilot && (
+                                            <span className="badge-warn"> · sin ficha</span>
+                                          )}
+                                        </td>
+                                        <td>{r.category || "—"}</td>
+                                        <td>{r.league || "—"}</td>
+                                        <td className="time">
+                                          {r.timeFormatted}
+                                          {r.timePenaltyMs > 0 && (
+                                            <div className="muted" style={{ fontSize: "0.75rem" }}>
+                                              base {r.rawTimeFormatted}
+                                            </div>
+                                          )}
+                                        </td>
+                                        <td>{r.partName || "—"}</td>
+                                        <td>
+                                          <input
+                                            className="penalty-input"
+                                            placeholder="0:05.000"
+                                            value={draft.timePenalty}
+                                            onChange={(e) =>
+                                              setPenaltyDrafts((prev) => ({
+                                                ...prev,
+                                                [pKey]: { ...draft, timePenalty: e.target.value },
+                                              }))
+                                            }
+                                          />
+                                        </td>
+                                        <td>
+                                          <input
+                                            className="penalty-input penalty-input-sm"
+                                            type="number"
+                                            min={0}
+                                            step={1}
+                                            placeholder="0"
+                                            value={draft.positionPenalty}
+                                            onChange={(e) =>
+                                              setPenaltyDrafts((prev) => ({
+                                                ...prev,
+                                                [pKey]: {
+                                                  ...draft,
+                                                  positionPenalty: e.target.value,
+                                                },
+                                              }))
+                                            }
+                                          />
+                                        </td>
+                                        <td>
+                                          <input
+                                            className="penalty-input penalty-input-wide"
+                                            placeholder="Motivo…"
+                                            value={draft.comment}
+                                            onChange={(e) =>
+                                              setPenaltyDrafts((prev) => ({
+                                                ...prev,
+                                                [pKey]: { ...draft, comment: e.target.value },
+                                              }))
+                                            }
+                                          />
+                                        </td>
+                                        <td>
+                                          <button
+                                            type="button"
+                                            className="btn btn-secondary btn-sm"
+                                            disabled={savingPenalty === pKey}
+                                            onClick={() =>
+                                              saveRowPenalty(test.id, testResults.scope, r.number)
+                                            }
+                                          >
+                                            {savingPenalty === pKey ? "…" : "OK"}
+                                          </button>
+                                        </td>
+                                      </tr>
+                                    );
+                                  })}
                                 </tbody>
                               </table>
                             </div>
+                            <p className="muted" style={{ fontSize: "0.8rem", margin: 0 }}>
+                              Pen. tiempo: formato <code>m:ss.xxx</code> o <code>hh:mm:ss.xxx</code>.
+                              Pen. pos: posiciones a sumar (+). Guarda con OK; el ranking se recalcula.
+                            </p>
                           </>
                         )}
                       </section>

@@ -900,11 +900,20 @@
         }
       ],
       "description": "vfdfbfdfg",
-      "showDescriptionInPdf": true
+      "showDescriptionInPdf": true,
+      "penalties": [
+        {
+          "number": "95",
+          "scope": "unified",
+          "timePenaltyMs": 10236,
+          "positionPenalty": 0,
+          "comment": "gvgv"
+        }
+      ]
     }
   ],
   "createdAt": "2026-07-21T23:15:14.087Z",
-  "updatedAt": "2026-07-22T01:17:06.778Z",
+  "updatedAt": "2026-07-22T03:59:40.080Z",
   "pilots": [
     {
       "id": "a7f13157-9a69-4c92-a2a3-29d59c386e53",

@@ -13,7 +13,7 @@ import {
 import type { Event, Pilot, Test, TestPart, TimingPoint } from "./types.js";
 import { parseOffsetToMs, formatOffset } from "./timeUtils.js";
 import { parseTimingCsv } from "./csvParser.js";
-import { computePartResults, computeTestResults, getPart, getTest } from "./results.js";
+import { computePartResults, computeTestResults, getPart, getTest, upsertPenalty } from "./results.js";
 import { resultsToCsv, resultsToExcel, resultsToPdf } from "./export.js";
 import { importPilotsFromCsv, previewPilotsCsv, type ColumnMapping } from "./pilotsCsv.js";
 
@@ -136,6 +136,7 @@ router.post("/events/:id/tests", (req, res) => {
     showDescriptionInPdf: Boolean(req.body.showDescriptionInPdf),
     order: event.tests.length,
     parts: [],
+    penalties: [],
   };
   event.tests.push(test);
   saveEvent(event);
@@ -277,18 +278,51 @@ router.get("/events/:id/tests/:testId/results", (req, res) => {
 
   let rows;
   let warning: string | undefined;
+  let scope: string;
   let title: string;
   if (partId) {
     const part = getPart(test, partId);
     if (!part) return res.status(404).json({ error: "Parte no encontrada" });
-    ({ rows, warning } = computePartResults(event, part, fromPointId, toPointId));
+    ({ rows, warning, scope } = computePartResults(event, test, part, fromPointId, toPointId));
     title = `${test.name} — ${part.name}`;
   } else {
-    ({ rows, warning } = computeTestResults(event, test, fromPointId, toPointId));
+    ({ rows, warning, scope } = computeTestResults(event, test, fromPointId, toPointId));
     title = `${test.name} — Resultado unificado`;
   }
 
-  res.json({ title, rows, warning: warning || null, eventName: event.name });
+  res.json({
+    title,
+    rows,
+    warning: warning || null,
+    scope,
+    eventName: event.name,
+  });
+});
+
+router.put("/events/:id/tests/:testId/penalties", (req, res) => {
+  const event = getEvent(req.params.id);
+  if (!event) return res.status(404).json({ error: "Evento no encontrado" });
+  const test = getTest(event, req.params.testId);
+  if (!test) return res.status(404).json({ error: "Prueba no encontrada" });
+
+  try {
+    let timePenaltyMs = Number(req.body.timePenaltyMs);
+    if (Number.isNaN(timePenaltyMs)) {
+      timePenaltyMs = parseOffsetToMs(String(req.body.timePenalty || "0"));
+    }
+    upsertPenalty(test, {
+      number: String(req.body.number || ""),
+      scope: String(req.body.scope || "unified"),
+      timePenaltyMs,
+      positionPenalty: Number(req.body.positionPenalty || 0),
+      comment: String(req.body.comment || ""),
+    });
+    if (!test.penalties) test.penalties = [];
+    saveEvent(event);
+    res.json({ ok: true, penalties: test.penalties });
+  } catch (err) {
+    res.status(400).json({ error: err instanceof Error ? err.message : "Error al guardar penalización" });
+  }
 });
 
 router.get("/events/:id/tests/:testId/export/:format", async (req, res) => {
@@ -306,7 +340,7 @@ router.get("/events/:id/tests/:testId/export/:format", async (req, res) => {
   if (partId) {
     const part = getPart(test, partId);
     if (!part) return res.status(404).json({ error: "Parte no encontrada" });
-    ({ rows } = computePartResults(event, part, fromPointId, toPointId));
+    ({ rows } = computePartResults(event, test, part, fromPointId, toPointId));
     title = `${test.name} — ${part.name}`;
   } else {
     ({ rows } = computeTestResults(event, test, fromPointId, toPointId));

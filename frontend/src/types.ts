@@ -53,6 +53,14 @@ export interface TestPart {
   csvs: PartCsvSlot[];
 }
 
+export interface PilotPenalty {
+  number: string;
+  scope: string;
+  timePenaltyMs: number;
+  positionPenalty: number;
+  comment: string;
+}
+
 export interface Test {
   id: string;
   name: string;
@@ -60,6 +68,7 @@ export interface Test {
   showDescriptionInPdf: boolean;
   order: number;
   parts: TestPart[];
+  penalties: PilotPenalty[];
 }
 
 export interface Event {
@@ -82,8 +91,14 @@ export interface ResultRow {
   name: string;
   category: string;
   league: string;
+  rawTimeMs: number;
+  rawTimeFormatted: string;
   timeMs: number;
   timeFormatted: string;
+  timePenaltyMs: number;
+  positionPenalty: number;
+  comment: string;
+  hasPenalty: boolean;
   partId?: string;
   partName?: string;
   missingPilot: boolean;

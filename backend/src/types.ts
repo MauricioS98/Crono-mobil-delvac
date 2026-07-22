@@ -65,6 +65,15 @@ export interface TestPart {
   csvs: PartCsvSlot[];
 }
 
+/** Penalty applied to a pilot within a results scope (part id or "unified") */
+export interface PilotPenalty {
+  number: string;
+  scope: string;
+  timePenaltyMs: number;
+  positionPenalty: number;
+  comment: string;
+}
+
 export interface Test {
   id: string;
   name: string;
@@ -73,6 +82,7 @@ export interface Test {
   showDescriptionInPdf: boolean;
   order: number;
   parts: TestPart[];
+  penalties: PilotPenalty[];
 }
 
 export interface Event {
@@ -96,8 +106,16 @@ export interface ResultRow {
   name: string;
   category: string;
   league: string;
+  /** Time before penalties */
+  rawTimeMs: number;
+  rawTimeFormatted: string;
+  /** Time after time penalty */
   timeMs: number;
   timeFormatted: string;
+  timePenaltyMs: number;
+  positionPenalty: number;
+  comment: string;
+  hasPenalty: boolean;
   partId?: string;
   partName?: string;
   missingPilot: boolean;

@@ -1183,4 +1183,36 @@ tr:hover td {
   font-size: 0.9rem;
 }
 
+.results-table-wrap {
+  overflow-x: auto;
+}
+
+.results-table {
+  min-width: 980px;
+}
+
+.results-table .penalty-input {
+  width: 100%;
+  min-width: 72px;
+  background: var(--bg);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 0.35rem 0.45rem;
+  font-size: 0.8rem;
+  color: var(--text);
+}
+
+.results-table .penalty-input-sm {
+  min-width: 52px;
+  max-width: 64px;
+}
+
+.results-table .penalty-input-wide {
+  min-width: 120px;
+}
+
+.results-table tr.row-penalty td {
+  background: rgba(196, 160, 53, 0.08);
+}
+
 

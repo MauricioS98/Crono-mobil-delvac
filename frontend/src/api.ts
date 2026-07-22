@@ -103,10 +103,32 @@ export const api = {
     Object.entries(params).forEach(([k, v]) => {
       if (v) q.set(k, v);
     });
-    return request<{ title: string; rows: ResultRow[]; warning?: string | null; eventName: string }>(
-      `/events/${eventId}/tests/${testId}/results?${q}`
-    );
+    return request<{
+      title: string;
+      rows: ResultRow[];
+      warning?: string | null;
+      scope: string;
+      eventName: string;
+    }>(`/events/${eventId}/tests/${testId}/results?${q}`);
   },
+
+  savePenalty: (
+    eventId: string,
+    testId: string,
+    data: {
+      number: string;
+      scope: string;
+      timePenalty?: string;
+      timePenaltyMs?: number;
+      positionPenalty?: number;
+      comment?: string;
+    }
+  ) =>
+    request<{ ok: boolean }>(`/events/${eventId}/tests/${testId}/penalties`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(data),
+    }),
 
   exportUrl: (eventId: string, testId: string, format: string, params: Record<string, string | undefined>) => {
     const q = new URLSearchParams();

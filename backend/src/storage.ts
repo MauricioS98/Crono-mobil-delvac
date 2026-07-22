@@ -41,6 +41,7 @@ export function getEvent(id: string): Event | null {
     ...t,
     description: t.description ?? "",
     showDescriptionInPdf: Boolean(t.showDescriptionInPdf),
+    penalties: t.penalties || [],
   }));
   return event;
 }
