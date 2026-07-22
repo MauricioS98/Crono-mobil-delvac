@@ -304,7 +304,262 @@
           "name": "Salida 3",
           "order": 2,
           "combinedMode": false,
-          "csvs": []
+          "csvs": [
+            {
+              "timingPointId": "b5454e99-d38b-4ba7-a5cd-1cf12736fdc7",
+              "filename": "0 - BD - DOMINGO.csv",
+              "parsed": {
+                "filename": "0 - BD - DOMINGO.csv",
+                "passages": [
+                  {
+                    "number": "91",
+                    "name": "",
+                    "tmPasosMs": 64888550,
+                    "tmPasosRaw": "18:01:28.550",
+                    "lapTimeMs": null,
+                    "lapTimeRaw": "",
+                    "clase": "",
+                    "rowIndex": 3
+                  },
+                  {
+                    "number": "92",
+                    "name": "",
+                    "tmPasosMs": 64890289,
+                    "tmPasosRaw": "18:01:30.289",
+                    "lapTimeMs": null,
+                    "lapTimeRaw": "",
+                    "clase": "",
+                    "rowIndex": 4
+                  },
+                  {
+                    "number": "93",
+                    "name": "",
+                    "tmPasosMs": 64892024,
+                    "tmPasosRaw": "18:01:32.024",
+                    "lapTimeMs": null,
+                    "lapTimeRaw": "",
+                    "clase": "",
+                    "rowIndex": 5
+                  },
+                  {
+                    "number": "94",
+                    "name": "",
+                    "tmPasosMs": 64893492,
+                    "tmPasosRaw": "18:01:33.492",
+                    "lapTimeMs": null,
+                    "lapTimeRaw": "",
+                    "clase": "",
+                    "rowIndex": 6
+                  },
+                  {
+                    "number": "95",
+                    "name": "",
+                    "tmPasosMs": 64894700,
+                    "tmPasosRaw": "18:01:34.700",
+                    "lapTimeMs": null,
+                    "lapTimeRaw": "",
+                    "clase": "",
+                    "rowIndex": 7
+                  }
+                ],
+                "flags": [
+                  {
+                    "type": "warmup",
+                    "tmPasosMs": 64863453,
+                    "tmPasosRaw": "18:01:03.453",
+                    "label": "Bandera de Calentamiento",
+                    "rowIndex": 1
+                  },
+                  {
+                    "type": "green",
+                    "tmPasosMs": 64863983,
+                    "tmPasosRaw": "18:01:03.983",
+                    "label": "Bandera Verde",
+                    "rowIndex": 2
+                  }
+                ],
+                "racePassages": [
+                  {
+                    "number": "91",
+                    "name": "",
+                    "tmPasosMs": 64888550,
+                    "tmPasosRaw": "18:01:28.550",
+                    "lapTimeMs": null,
+                    "lapTimeRaw": "",
+                    "clase": "",
+                    "rowIndex": 3
+                  },
+                  {
+                    "number": "92",
+                    "name": "",
+                    "tmPasosMs": 64890289,
+                    "tmPasosRaw": "18:01:30.289",
+                    "lapTimeMs": null,
+                    "lapTimeRaw": "",
+                    "clase": "",
+                    "rowIndex": 4
+                  },
+                  {
+                    "number": "93",
+                    "name": "",
+                    "tmPasosMs": 64892024,
+                    "tmPasosRaw": "18:01:32.024",
+                    "lapTimeMs": null,
+                    "lapTimeRaw": "",
+                    "clase": "",
+                    "rowIndex": 5
+                  },
+                  {
+                    "number": "94",
+                    "name": "",
+                    "tmPasosMs": 64893492,
+                    "tmPasosRaw": "18:01:33.492",
+                    "lapTimeMs": null,
+                    "lapTimeRaw": "",
+                    "clase": "",
+                    "rowIndex": 6
+                  },
+                  {
+                    "number": "95",
+                    "name": "",
+                    "tmPasosMs": 64894700,
+                    "tmPasosRaw": "18:01:34.700",
+                    "lapTimeMs": null,
+                    "lapTimeRaw": "",
+                    "clase": "",
+                    "rowIndex": 7
+                  }
+                ]
+              }
+            },
+            {
+              "timingPointId": "063b9908-44bb-4a82-8ff7-760787a7fa63",
+              "filename": "0 - BD - DOMINGO - 2.csv",
+              "parsed": {
+                "filename": "0 - BD - DOMINGO - 2.csv",
+                "passages": [
+                  {
+                    "number": "95",
+                    "name": "",
+                    "tmPasosMs": 64923801,
+                    "tmPasosRaw": "18:02:03.801",
+                    "lapTimeMs": null,
+                    "lapTimeRaw": "",
+                    "clase": "",
+                    "rowIndex": 3
+                  },
+                  {
+                    "number": "93",
+                    "name": "",
+                    "tmPasosMs": 64924258,
+                    "tmPasosRaw": "18:02:04.258",
+                    "lapTimeMs": null,
+                    "lapTimeRaw": "",
+                    "clase": "",
+                    "rowIndex": 4
+                  },
+                  {
+                    "number": "92",
+                    "name": "",
+                    "tmPasosMs": 64924525,
+                    "tmPasosRaw": "18:02:04.525",
+                    "lapTimeMs": null,
+                    "lapTimeRaw": "",
+                    "clase": "",
+                    "rowIndex": 5
+                  },
+                  {
+                    "number": "94",
+                    "name": "",
+                    "tmPasosMs": 64924852,
+                    "tmPasosRaw": "18:02:04.852",
+                    "lapTimeMs": null,
+                    "lapTimeRaw": "",
+                    "clase": "",
+                    "rowIndex": 6
+                  },
+                  {
+                    "number": "91",
+                    "name": "",
+                    "tmPasosMs": 64925309,
+                    "tmPasosRaw": "18:02:05.309",
+                    "lapTimeMs": null,
+                    "lapTimeRaw": "",
+                    "clase": "",
+                    "rowIndex": 7
+                  }
+                ],
+                "flags": [
+                  {
+                    "type": "warmup",
+                    "tmPasosMs": 64920565,
+                    "tmPasosRaw": "18:02:00.565",
+                    "label": "Bandera de Calentamiento",
+                    "rowIndex": 1
+                  },
+                  {
+                    "type": "green",
+                    "tmPasosMs": 64921165,
+                    "tmPasosRaw": "18:02:01.165",
+                    "label": "Bandera Verde",
+                    "rowIndex": 2
+                  }
+                ],
+                "racePassages": [
+                  {
+                    "number": "95",
+                    "name": "",
+                    "tmPasosMs": 64923801,
+                    "tmPasosRaw": "18:02:03.801",
+                    "lapTimeMs": null,
+                    "lapTimeRaw": "",
+                    "clase": "",
+                    "rowIndex": 3
+                  },
+                  {
+                    "number": "93",
+                    "name": "",
+                    "tmPasosMs": 64924258,
+                    "tmPasosRaw": "18:02:04.258",
+                    "lapTimeMs": null,
+                    "lapTimeRaw": "",
+                    "clase": "",
+                    "rowIndex": 4
+                  },
+                  {
+                    "number": "92",
+                    "name": "",
+                    "tmPasosMs": 64924525,
+                    "tmPasosRaw": "18:02:04.525",
+                    "lapTimeMs": null,
+                    "lapTimeRaw": "",
+                    "clase": "",
+                    "rowIndex": 5
+                  },
+                  {
+                    "number": "94",
+                    "name": "",
+                    "tmPasosMs": 64924852,
+                    "tmPasosRaw": "18:02:04.852",
+                    "lapTimeMs": null,
+                    "lapTimeRaw": "",
+                    "clase": "",
+                    "rowIndex": 6
+                  },
+                  {
+                    "number": "91",
+                    "name": "",
+                    "tmPasosMs": 64925309,
+                    "tmPasosRaw": "18:02:05.309",
+                    "lapTimeMs": null,
+                    "lapTimeRaw": "",
+                    "clase": "",
+                    "rowIndex": 7
+                  }
+                ]
+              }
+            }
+          ]
         },
         {
           "id": "9e3c301d-2ac8-4011-850c-66cb69a2c41b",
@@ -457,7 +712,7 @@
           "id": "54f395ed-dd0e-4e5f-98e0-76d70b3c239b",
           "name": "Salida 25",
           "order": 24,
-          "combinedMode": false,
+          "combinedMode": true,
           "csvs": []
         },
         {
@@ -512,26 +767,11 @@
       ],
       "description": "vfdfbfdfg",
       "showDescriptionInPdf": true,
-      "penalties": [
-        {
-          "number": "95",
-          "scope": "unified",
-          "timePenaltyMs": 600236,
-          "positionPenalty": 0,
-          "comment": "gfghg"
-        },
-        {
-          "number": "93",
-          "scope": "unified",
-          "timePenaltyMs": 0,
-          "positionPenalty": 3,
-          "comment": ""
-        }
-      ]
+      "penalties": []
     }
   ],
   "createdAt": "2026-07-21T23:15:14.087Z",
-  "updatedAt": "2026-07-22T05:02:12.979Z",
+  "updatedAt": "2026-07-22T06:45:19.297Z",
   "pilots": [
     {
       "id": "a7f13157-9a69-4c92-a2a3-29d59c386e53",
@@ -796,6 +1036,14 @@
       "category": "115 cc Inicio",
       "league": "Cauca",
       "notes": "Club: CLUB CORONA CLUB XTREME PARK · Moto: Yamaha · Doc: 1143865748"
+    },
+    {
+      "id": "3136d47d-e80b-4c28-920b-1a368d5d422f",
+      "number": "95",
+      "name": "Pepi",
+      "category": "150 cc",
+      "league": "Cundi",
+      "notes": "sdasd"
     }
   ]
 }

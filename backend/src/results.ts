@@ -12,6 +12,8 @@ import type {
 } from "./types.js";
 
 export const UNIFIED_SCOPE = "unified";
+/** Single shared penalty per pilot within a test (salida ↔ unificado) */
+export const SHARED_PENALTY_SCOPE = "shared";
 
 function pickName(a: string, b?: string): string {
   return a || b || "";
@@ -52,15 +54,25 @@ function correctedTime(rawMs: number, point: TimingPoint | undefined): number {
   return rawMs - (point?.offsetMs ?? 0);
 }
 
+/**
+ * Penalties are shared per pilot within a test (any salida + unified).
+ * Legacy data may have multiple scopes; we merge them.
+ */
 function findPenalty(
   penalties: PilotPenalty[] | undefined,
-  number: string,
-  scope: string
+  number: string
 ): PilotPenalty | undefined {
   const key = normalizeNumber(number);
-  return (penalties || []).find(
-    (p) => normalizeNumber(p.number) === key && p.scope === scope
-  );
+  const matches = (penalties || []).filter((p) => normalizeNumber(p.number) === key);
+  if (matches.length === 0) return undefined;
+  if (matches.length === 1) return matches[0];
+  return {
+    number: matches[0].number,
+    scope: SHARED_PENALTY_SCOPE,
+    timePenaltyMs: Math.max(...matches.map((m) => m.timePenaltyMs || 0)),
+    positionPenalty: Math.max(...matches.map((m) => m.positionPenalty || 0)),
+    comment: matches.map((m) => m.comment || "").find((c) => c.trim()) || "",
+  };
 }
 
 function enrich(
@@ -90,17 +102,106 @@ function enrich(
     partName: part?.name,
     missingPilot: !pilot,
     segmentLabel,
+    incomplete: false,
   };
+}
+
+function enrichIncomplete(
+  pilots: Pilot[],
+  number: string,
+  name: string,
+  reason: "missing_start" | "missing_finish",
+  fromLabel: string,
+  toLabel: string,
+  part?: TestPart
+): ResultRow {
+  const statusLabel =
+    reason === "missing_finish"
+      ? `Incompleto: sin llegada (${toLabel})`
+      : `Incompleto: sin salida (${fromLabel})`;
+  const row = enrich(pilots, number, name, 0, statusLabel, part);
+  return {
+    ...row,
+    rawTimeFormatted: "—",
+    timeFormatted: "—",
+    incomplete: true,
+    incompleteReason: reason,
+    statusLabel,
+  };
+}
+
+function partsInOrder(test: Test): TestPart[] {
+  return [...test.parts].sort((a, b) => a.order - b.order || a.name.localeCompare(b.name));
+}
+
+function earlierParts(test: Test, part: TestPart): TestPart[] {
+  const ordered = partsInOrder(test);
+  const idx = ordered.findIndex((p) => p.id === part.id);
+  if (idx <= 0) return [];
+  return ordered.slice(0, idx);
+}
+
+type Passage = { number: string; name: string; tm: number; lap: number | null };
+
+/** Look for start (Desde) in earlier salidas when current only has finish */
+function findEarlierFromPassage(
+  event: Event,
+  test: Test,
+  currentPart: TestPart,
+  fromId: string,
+  pilotKey: string
+): { passage: Passage; part: TestPart; point: TimingPoint | undefined } | null {
+  const points = event.timingPoints;
+  // Most recent earlier salida first (still closing the previous wave)
+  for (const prev of [...earlierParts(test, currentPart)].reverse()) {
+    const slot = prev.csvs.find((c) => c.timingPointId === fromId);
+    if (!slot) continue;
+    const map = firstRacePassageByPilot(slot.parsed);
+    const passage = map.get(pilotKey);
+    if (passage) {
+      return {
+        passage,
+        part: prev,
+        point: points.find((p) => p.id === fromId),
+      };
+    }
+  }
+  return null;
+}
+
+function mergeCompleteAndIncomplete(
+  complete: ResultRow[],
+  incomplete: ResultRow[],
+  penalties: PilotPenalty[] | undefined,
+  scope: string
+): ResultRow[] {
+  const ranked = applyPenalties(rankRaw(complete), penalties, scope);
+  const incompleteOut = incomplete.map((r) => {
+    const pen = findPenalty(penalties, r.number);
+    return {
+      ...r,
+      position: 0,
+      timePenaltyMs: pen?.timePenaltyMs || 0,
+      positionPenalty: pen?.positionPenalty || 0,
+      comment: pen?.comment || "",
+      hasPenalty: Boolean(
+        (pen?.timePenaltyMs || 0) > 0 ||
+          (pen?.positionPenalty || 0) > 0 ||
+          (pen?.comment || "").trim()
+      ),
+    };
+  });
+  return [...ranked, ...incompleteOut];
 }
 
 /** Apply time + position penalties and re-rank */
 export function applyPenalties(
   rows: ResultRow[],
   penalties: PilotPenalty[] | undefined,
-  scope: string
+  _scope?: string
 ): ResultRow[] {
   const withTime = rows.map((r) => {
-    const pen = findPenalty(penalties, r.number, scope);
+    const pen = findPenalty(penalties, r.number);
     const timePenaltyMs = pen?.timePenaltyMs || 0;
     const positionPenalty = pen?.positionPenalty || 0;
     const comment = pen?.comment || "";
@@ -140,6 +241,65 @@ export interface ResultsComputation {
   rows: ResultRow[];
   warning?: string;
   scope: string;
+  /** Present when partial results exclude pilots already seen in earlier salidas */
+  diffNote?: string;
+}
+
+/**
+ * For cumulative CSV dumps (salida N includes all of N-1 + new pilots),
+ * keep only pilots that did not appear with a complete time in any earlier salida.
+ * Incomplete (solo A o solo B) do not count as "already listed".
+ */
+export function filterNewPilotsVsEarlier(
+  event: Event,
+  test: Test,
+  part: TestPart,
+  rows: ResultRow[],
+  fromPointId?: string,
+  toPointId?: string
+): { rows: ResultRow[]; diffNote?: string } {
+  const earlier = earlierParts(test, part);
+  if (earlier.length === 0 || rows.length === 0) {
+    return { rows };
+  }
+
+  const seen = new Set<string>();
+  const comparedNames: string[] = [];
+  for (const prev of earlier) {
+    const raw = computePartResultsRaw(event, test, prev, fromPointId, toPointId);
+    const completePrev = raw.rows.filter((r) => !r.incomplete);
+    if (completePrev.length === 0) continue;
+    comparedNames.push(prev.name);
+    for (const r of completePrev) seen.add(normalizeNumber(r.number));
+  }
+
+  if (seen.size === 0) {
+    return { rows };
+  }
+
+  const onlyNew = rows.filter((r) => !seen.has(normalizeNumber(r.number)));
+  const excluded = rows.length - onlyNew.length;
+  const complete = onlyNew.filter((r) => !r.incomplete);
+  const incomplete = onlyNew.filter((r) => r.incomplete);
+  const reranked = [
+    ...complete.map((r, i) => ({ ...r, position: i + 1 })),
+    ...incomplete.map((r) => ({ ...r, position: 0 })),
+  ];
+
+  const vs =
+    comparedNames.length === 1
+      ? comparedNames[0]
+      : comparedNames.length > 1
+        ? `salidas anteriores (${comparedNames.join(", ")})`
+        : "salidas anteriores";
+
+  return {
+    rows: reranked,
+    diffNote:
+      excluded > 0
+        ? `Solo diferencia vs ${vs}: ${reranked.length} piloto(s) nuevo(s)/pendiente(s), ${excluded} ya con tiempo completo antes.`
+        : `Sin pilotos nuevos vs ${vs} (todos ya tenían tiempo completo en salidas anteriores).`,
+  };
 }
 
 export function computePartResults(
@@ -183,22 +343,21 @@ export function computePartResults(
 
   const fromSlot = part.csvs.find((c) => c.timingPointId === fromId);
   const toSlot = part.csvs.find((c) => c.timingPointId === toId);
-  if (!fromSlot || !toSlot) {
-    const missing = [
-      !fromSlot ? points.find((p) => p.id === fromId)?.name || "Desde" : null,
-      !toSlot ? points.find((p) => p.id === toId)?.name || "Hasta" : null,
-    ]
-      .filter(Boolean)
-      .join(" y ");
-    return { rows: [], warning: `Falta cargar el CSV de: ${missing}.`, scope };
-  }
-
   const fromPoint = points.find((p) => p.id === fromId);
   const toPoint = points.find((p) => p.id === toId);
-  const fromMap = firstRacePassageByPilot(fromSlot.parsed);
-  const toMap = firstRacePassageByPilot(toSlot.parsed);
+  const fromLabel = fromPoint?.name ?? "Desde";
+  const toLabel = toPoint?.name ?? "Hasta";
 
-  if (fromMap.size === 0 || toMap.size === 0) {
+  if (!fromSlot && !toSlot) {
+    return { rows: [], warning: `Falta cargar los CSV de ${fromLabel} y ${toLabel}.`, scope };
+  }
+
+  const fromMap = fromSlot
+    ? firstRacePassageByPilot(fromSlot.parsed)
+    : new Map<string, Passage>();
+  const toMap = toSlot ? firstRacePassageByPilot(toSlot.parsed) : new Map<string, Passage>();
+
+  if (fromMap.size === 0 && toMap.size === 0) {
     return {
       rows: [],
       warning:
@@ -207,47 +366,98 @@ export function computePartResults(
     };
   }
 
-  const rows: ResultRow[] = [];
-  let matched = 0;
+  const complete: ResultRow[] = [];
+  const incomplete: ResultRow[] = [];
   let nonPositive = 0;
+  const allKeys = new Set<string>([...fromMap.keys(), ...toMap.keys()]);
 
-  for (const [key, from] of fromMap) {
+  for (const key of allKeys) {
+    const from = fromMap.get(key);
     const to = toMap.get(key);
-    if (!to) continue;
-    matched++;
-    const tFrom = correctedTime(from.tm, fromPoint);
-    const tTo = correctedTime(to.tm, toPoint);
-    const delta = tTo - tFrom;
-    if (delta <= 0) {
-      nonPositive++;
+
+    if (from && to) {
+      const tFrom = correctedTime(from.tm, fromPoint);
+      const tTo = correctedTime(to.tm, toPoint);
+      const delta = tTo - tFrom;
+      if (delta <= 0) {
+        nonPositive++;
+        continue;
+      }
+      complete.push(
+        enrich(
+          pilots,
+          from.number,
+          pickName(from.name, to.name),
+          delta,
+          `${fromLabel} → ${toLabel}`,
+          part
+        )
+      );
       continue;
     }
-    rows.push(
-      enrich(
-        pilots,
-        from.number,
-        pickName(from.name, to.name),
-        delta,
-        `${fromPoint?.name ?? "A"} → ${toPoint?.name ?? "B"}`,
-        part
-      )
-    );
+
+    if (from && !to) {
+      incomplete.push(
+        enrichIncomplete(
+          pilots,
+          from.number,
+          from.name,
+          "missing_finish",
+          fromLabel,
+          toLabel,
+          part
+        )
+      );
+      continue;
+    }
+
+    if (!from && to) {
+      const earlierFrom = findEarlierFromPassage(event, test, part, fromId, key);
+      if (earlierFrom) {
+        const tFrom = correctedTime(earlierFrom.passage.tm, earlierFrom.point);
+        const tTo = correctedTime(to.tm, toPoint);
+        const delta = tTo - tFrom;
+        if (delta <= 0) {
+          nonPositive++;
+          continue;
+        }
+        complete.push(
+          enrich(
+            pilots,
+            to.number,
+            pickName(to.name, earlierFrom.passage.name),
+            delta,
+            `${fromLabel} (${earlierFrom.part.name}) → ${toLabel} (${part.name})`,
+            part
+          )
+        );
+      } else {
+        incomplete.push(
+          enrichIncomplete(pilots, to.number, to.name, "missing_start", fromLabel, toLabel, part)
+        );
+      }
+    }
   }
 
-  if (rows.length === 0) {
-    if (matched === 0) {
-      return { rows: [], warning: "No hay pilotos en común (mismo N°) entre ambos CSV.", scope };
-    }
+  if (complete.length === 0 && incomplete.length === 0) {
     if (nonPositive > 0) {
       return {
         rows: [],
-        warning: `Se emparejaron ${matched} piloto(s), pero todos los tiempos salieron ≤ 0 tras aplicar desfases. Revisa los desfases de los puntos de cronometraje (relativos a PC A).`,
+        warning: `Se emparejaron piloto(s), pero todos los tiempos salieron ≤ 0 tras aplicar desfases. Revisa los desfases de los puntos de cronometraje (relativos a PC A).`,
         scope,
       };
     }
+    return {
+      rows: [],
+      warning: "No hay pasadas válidas para emparejar entre los CSV.",
+      scope,
+    };
   }
 
-  return { rows: applyPenalties(rankRaw(rows), test.penalties, scope), scope };
+  return {
+    rows: mergeCompleteAndIncomplete(complete, incomplete, test.penalties, scope),
+    scope,
+  };
 }
 
 export function computeTestResults(
@@ -265,10 +475,11 @@ export function computeTestResults(
   }
 
   for (const part of test.parts) {
-    // Raw part results without part-scope penalties — unified has its own penalties
-    const raw = computePartResultsRaw(event, part, fromPointId, toPointId);
+    // Best raw time across salidas; shared penalties applied after selection
+    const raw = computePartResultsRaw(event, test, part, fromPointId, toPointId);
     if (raw.warning) warnings.push(`${part.name}: ${raw.warning}`);
     for (const row of raw.rows) {
+      if (row.incomplete) continue;
       const key = normalizeNumber(row.number);
       const prev = best.get(key);
       if (!prev || row.rawTimeMs < prev.rawTimeMs) {
@@ -288,24 +499,16 @@ export function computeTestResults(
   return { rows, scope };
 }
 
-/** Part results without applying penalties (for unified best-time selection) */
+/** Part results without applying penalties (for unified / diff). Keeps lookback across salidas. */
 function computePartResultsRaw(
   event: Event,
+  test: Test,
   part: TestPart,
   fromPointId?: string,
   toPointId?: string
 ): { rows: ResultRow[]; warning?: string } {
-  const fakeTest: Test = {
-    id: "",
-    name: "",
-    description: "",
-    showDescriptionInPdf: false,
-    order: 0,
-    parts: [],
-    penalties: [],
-  };
-  const { rows, warning } = computePartResults(event, fakeTest, part, fromPointId, toPointId);
-  // computePartResults with empty penalties still applies applyPenalties with no effect
+  const noPenalties: Test = { ...test, penalties: [] };
+  const { rows, warning } = computePartResults(event, noPenalties, part, fromPointId, toPointId);
   return { rows, warning };
 }
 
@@ -313,32 +516,33 @@ export function upsertPenalty(
   test: Test,
   input: {
     number: string;
-    scope: string;
+    scope?: string;
     timePenaltyMs?: number;
     positionPenalty?: number;
     comment?: string;
   }
 ): Test {
   const number = String(input.number || "").trim();
-  const scope = String(input.scope || UNIFIED_SCOPE);
   if (!number) throw new Error("N° de piloto requerido");
 
   const timePenaltyMs = Math.max(0, Math.round(input.timePenaltyMs || 0));
   const positionPenalty = Math.max(0, Math.round(input.positionPenalty || 0));
   const comment = (input.comment || "").trim();
 
-  const penalties = [...(test.penalties || [])];
-  const idx = penalties.findIndex(
-    (p) => normalizeNumber(p.number) === normalizeNumber(number) && p.scope === scope
+  // One penalty per pilot for the whole test (shared across salidas + unificado)
+  const penalties = (test.penalties || []).filter(
+    (p) => normalizeNumber(p.number) !== normalizeNumber(number)
   );
 
   const empty = timePenaltyMs === 0 && positionPenalty === 0 && !comment;
-  if (empty) {
-    if (idx >= 0) penalties.splice(idx, 1);
-  } else {
-    const entry: PilotPenalty = { number, scope, timePenaltyMs, positionPenalty, comment };
-    if (idx >= 0) penalties[idx] = entry;
-    else penalties.push(entry);
+  if (!empty) {
+    penalties.push({
+      number,
+      scope: SHARED_PENALTY_SCOPE,
+      timePenaltyMs,
+      positionPenalty,
+      comment,
+    });
   }
 
   test.penalties = penalties;

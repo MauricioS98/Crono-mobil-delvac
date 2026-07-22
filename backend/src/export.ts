@@ -212,8 +212,10 @@ export async function resultsToPdf(
   event: Event,
   test?: Test | null
 ): Promise<Buffer> {
+  // Incomplete times (solo A o solo B) stay in the app UI but never in the PDF
+  const exportRows = rows.filter((r) => !r.incomplete);
   return new Promise((resolve, reject) => {
-    const flags = penaltyFlags(rows);
+    const flags = penaltyFlags(exportRows);
     const hasPenaltyCols = flags.time || flags.position || flags.comment;
     const FOOTER_H = 40;
 
@@ -331,8 +333,8 @@ export async function resultsToPdf(
     };
 
     doc.font("Helvetica").fontSize(fontSize);
-    for (let i = 0; i < rows.length; i++) {
-      const r = rows[i];
+    for (let i = 0; i < exportRows.length; i++) {
+      const r = exportRows[i];
       const rowH = flags.comment && r.comment.trim() ? 20 : 15;
 
       if (y + rowH > contentBottom()) {

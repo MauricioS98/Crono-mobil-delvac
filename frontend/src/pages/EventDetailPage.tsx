@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
-import { api, formatOffsetInput } from "../api";
+import { api, formatOffsetInput, formatPenaltyInput, parseOffsetToMs } from "../api";
 import type { Event, ResultRow, Test, TestPart, TimingPoint } from "../types";
 import { EventPilotsSection } from "./EventPilotsSection";
 
@@ -39,6 +39,7 @@ export function EventDetailPage() {
         rows: ResultRow[];
         title: string;
         warning: string;
+        diffNote?: string;
         partId?: string;
         scope: string;
       }
@@ -95,6 +96,7 @@ export function EventDetailPage() {
           rows: data.rows,
           title: data.title,
           warning: data.warning || "",
+          diffNote: data.diffNote || "",
           partId: pid,
           scope: data.scope,
         },
@@ -102,9 +104,9 @@ export function EventDetailPage() {
       const drafts: Record<string, { timePenalty: string; positionPenalty: string; comment: string }> =
         {};
       for (const r of data.rows) {
-        const key = `${testId}:${data.scope}:${r.number}`;
+        const key = `${testId}:${r.number}`;
         drafts[key] = {
-          timePenalty: r.timePenaltyMs ? formatOffsetInput(r.timePenaltyMs).replace(/^00:/, "") : "",
+          timePenalty: formatPenaltyInput(r.timePenaltyMs),
           positionPenalty: r.positionPenalty ? String(r.positionPenalty) : "",
           comment: r.comment || "",
         };
@@ -117,7 +119,7 @@ export function EventDetailPage() {
 
   const saveRowPenalty = async (testId: string, scope: string, number: string) => {
     if (!event) return;
-    const key = `${testId}:${scope}:${number}`;
+    const key = `${testId}:${number}`;
     const draft = penaltyDrafts[key] || { timePenalty: "", positionPenalty: "", comment: "" };
     setSavingPenalty(key);
     setError("");
@@ -592,6 +594,10 @@ export function EventDetailPage() {
                                 >
                                   Calcular resultado parcial
                                 </button>
+                                <p className="muted" style={{ fontSize: "0.8rem", margin: "0.5rem 0 0" }}>
+                                  Si el CSV es acumulativo, solo se listan pilotos nuevos respecto a
+                                  salidas anteriores.
+                                </p>
                               </div>
                             )}
                           </>
@@ -638,11 +644,16 @@ export function EventDetailPage() {
                         {testResults?.warning && (
                           <div className="alert alert-error">{testResults.warning}</div>
                         )}
+                        {testResults?.diffNote && (
+                          <div className="alert alert-info">{testResults.diffNote}</div>
+                        )}
 
                         {testResults?.title &&
                           testResults.rows.length === 0 &&
                           !testResults.warning && (
-                            <div className="empty empty-sm">Sin resultados para mostrar.</div>
+                            <div className="empty empty-sm">
+                              {testResults.diffNote || "Sin resultados para mostrar."}
+                            </div>
                           )}
 
                         {testResults && testResults.rows.length > 0 && (
@@ -681,7 +692,7 @@ export function EventDetailPage() {
                                 </thead>
                                 <tbody>
                                   {testResults.rows.map((r) => {
-                                    const pKey = `${test.id}:${testResults.scope}:${r.number}`;
+                                    const pKey = `${test.id}:${r.number}`;
                                     const draft = penaltyDrafts[pKey] || {
                                       timePenalty: "",
                                       positionPenalty: "",
@@ -689,11 +700,20 @@ export function EventDetailPage() {
                                     };
                                     return (
                                       <tr
-                                        key={`${r.number}-${r.partId || "u"}`}
-                                        className={r.hasPenalty ? "row-penalty" : ""}
+                                        key={`${r.number}-${r.partId || "u"}-${r.incomplete ? "inc" : "ok"}`}
+                                        className={[
+                                          r.hasPenalty ? "row-penalty" : "",
+                                          r.incomplete ? "row-incomplete" : "",
+                                        ]
+                                          .filter(Boolean)
+                                          .join(" ")}
                                       >
-                                        <td className={r.position <= 3 ? `pos-${r.position}` : ""}>
-                                          {r.position}
+                                        <td
+                                          className={
+                                            !r.incomplete && r.position <= 3 ? `pos-${r.position}` : ""
+                                          }
+                                        >
+                                          {r.incomplete ? "—" : r.position}
                                         </td>
                                         <td>{r.number}</td>
                                         <td>
@@ -705,26 +725,77 @@ export function EventDetailPage() {
                                         <td>{r.category || "—"}</td>
                                         <td>{r.league || "—"}</td>
                                         <td className="time">
-                                          {r.timeFormatted}
-                                          {r.timePenaltyMs > 0 && (
-                                            <div className="muted" style={{ fontSize: "0.75rem" }}>
-                                              base {r.rawTimeFormatted}
+                                          {r.incomplete ? (
+                                            <span className="badge-incomplete" title={r.statusLabel}>
+                                              {r.statusLabel || "Incompleto"}
+                                            </span>
+                                          ) : (
+                                            <>
+                                              {r.timeFormatted}
+                                              {r.timePenaltyMs > 0 && (
+                                                <div className="muted" style={{ fontSize: "0.75rem" }}>
+                                                  base {r.rawTimeFormatted}
+                                                </div>
+                                              )}
+                                            </>
+                                          )}
+                                          {!r.incomplete && r.segmentLabel?.includes("(") && (
+                                            <div className="muted" style={{ fontSize: "0.72rem" }}>
+                                              {r.segmentLabel}
                                             </div>
                                           )}
                                         </td>
                                         <td>{r.partName || "—"}</td>
                                         <td>
-                                          <input
-                                            className="penalty-input"
-                                            placeholder="0:05.000"
-                                            value={draft.timePenalty}
-                                            onChange={(e) =>
-                                              setPenaltyDrafts((prev) => ({
-                                                ...prev,
-                                                [pKey]: { ...draft, timePenalty: e.target.value },
-                                              }))
-                                            }
-                                          />
+                                          <div className="penalty-time-cell">
+                                            <input
+                                              className="penalty-input"
+                                              placeholder="0:05.000"
+                                              value={draft.timePenalty}
+                                              onChange={(e) =>
+                                                setPenaltyDrafts((prev) => ({
+                                                  ...prev,
+                                                  [pKey]: { ...draft, timePenalty: e.target.value },
+                                                }))
+                                              }
+                                            />
+                                            <button
+                                              type="button"
+                                              className="btn btn-secondary btn-sm penalty-adj"
+                                              title="Restar 5 segundos"
+                                              onClick={() => {
+                                                const current = parseOffsetToMs(draft.timePenalty || "0");
+                                                const next = Math.max(0, current - 5000);
+                                                setPenaltyDrafts((prev) => ({
+                                                  ...prev,
+                                                  [pKey]: {
+                                                    ...draft,
+                                                    timePenalty: formatPenaltyInput(next),
+                                                  },
+                                                }));
+                                              }}
+                                            >
+                                              −5
+                                            </button>
+                                            <button
+                                              type="button"
+                                              className="btn btn-secondary btn-sm penalty-adj"
+                                              title="Sumar 5 segundos"
+                                              onClick={() => {
+                                                const current = parseOffsetToMs(draft.timePenalty || "0");
+                                                const next = Math.max(0, current) + 5000;
+                                                setPenaltyDrafts((prev) => ({
+                                                  ...prev,
+                                                  [pKey]: {
+                                                    ...draft,
+                                                    timePenalty: formatPenaltyInput(next),
+                                                  },
+                                                }));
+                                              }}
+                                            >
+                                              +5
+                                            </button>
+                                          </div>
                                         </td>
                                         <td>
                                           <input
@@ -777,8 +848,11 @@ export function EventDetailPage() {
                               </table>
                             </div>
                             <p className="muted" style={{ fontSize: "0.8rem", margin: 0 }}>
-                              Pen. tiempo: formato <code>m:ss.xxx</code> o <code>hh:mm:ss.xxx</code>.
-                              Pen. pos: posiciones a sumar (+). Guarda con OK; el ranking se recalcula.
+                              Pen. tiempo: formato <code>m:ss.xxx</code> o <code>hh:mm:ss.xxx</code>{" "}
+                              (atajos <strong>−5</strong> / <strong>+5</strong>). Pen. pos: posiciones a
+                              sumar (+). Guarda con OK; el ranking se recalcula. Los tiempos incompletos
+                              (solo salida o solo llegada) aparecen marcados aquí y no salen en el PDF
+                              hasta tener ambos puntos.
                             </p>
                           </>
                         )}

@@ -420,6 +420,12 @@ tr:hover td {
   color: #f0b0a6;
 }
 
+.alert-info {
+  background: rgba(90, 140, 180, 0.15);
+  border-color: rgba(90, 140, 180, 0.45);
+  color: #b8d4e8;
+}
+
 .tabs {
   display: flex;
   gap: 0.35rem;
@@ -1191,6 +1197,26 @@ tr:hover td {
   min-width: 980px;
 }
 
+.results-table .penalty-time-cell {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  min-width: 150px;
+}
+
+.results-table .penalty-time-cell .penalty-input {
+  flex: 1;
+  min-width: 72px;
+}
+
+.results-table .penalty-adj {
+  flex-shrink: 0;
+  padding: 0.3rem 0.45rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+  min-width: 2rem;
+}
+
 .results-table .penalty-input {
   width: 100%;
   min-width: 72px;
@@ -1213,6 +1239,18 @@ tr:hover td {
 
 .results-table tr.row-penalty td {
   background: rgba(196, 160, 53, 0.08);
+}
+
+.results-table tr.row-incomplete td {
+  background: rgba(180, 100, 40, 0.12);
+}
+
+.badge-incomplete {
+  display: inline-block;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #f0c090;
+  line-height: 1.35;
 }
 
 

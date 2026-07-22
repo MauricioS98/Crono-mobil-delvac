@@ -55,6 +55,7 @@ export interface TestPart {
 
 export interface PilotPenalty {
   number: string;
+  /** Kept for compatibility; penalties are shared per pilot in the test */
   scope: string;
   timePenaltyMs: number;
   positionPenalty: number;
@@ -103,4 +104,7 @@ export interface ResultRow {
   partName?: string;
   missingPilot: boolean;
   segmentLabel: string;
+  incomplete?: boolean;
+  incompleteReason?: "missing_start" | "missing_finish";
+  statusLabel?: string;
 }

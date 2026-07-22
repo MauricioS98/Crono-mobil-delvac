@@ -65,9 +65,10 @@ export interface TestPart {
   csvs: PartCsvSlot[];
 }
 
-/** Penalty applied to a pilot within a results scope (part id or "unified") */
+/** Penalty applied to a pilot within a test (shared across all salidas and unified results) */
 export interface PilotPenalty {
   number: string;
+  /** Kept for compatibility; penalties are shared per pilot in the test */
   scope: string;
   timePenaltyMs: number;
   positionPenalty: number;
@@ -120,4 +121,9 @@ export interface ResultRow {
   partName?: string;
   missingPilot: boolean;
   segmentLabel: string;
+  /** True when only one timing point is present (not exportable to PDF) */
+  incomplete?: boolean;
+  incompleteReason?: "missing_start" | "missing_finish";
+  /** Human-readable status for incomplete rows */
+  statusLabel?: string;
 }

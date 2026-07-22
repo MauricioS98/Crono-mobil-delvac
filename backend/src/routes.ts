@@ -13,7 +13,7 @@ import {
 import type { Event, Pilot, Test, TestPart, TimingPoint } from "./types.js";
 import { parseOffsetToMs, formatOffset } from "./timeUtils.js";
 import { parseTimingCsv } from "./csvParser.js";
-import { computePartResults, computeTestResults, getPart, getTest, upsertPenalty } from "./results.js";
+import { computePartResults, computeTestResults, filterNewPilotsVsEarlier, getPart, getTest, upsertPenalty } from "./results.js";
 import { resultsToCsv, resultsToExcel, resultsToPdf } from "./export.js";
 import { importPilotsFromCsv, previewPilotsCsv, type ColumnMapping } from "./pilotsCsv.js";
 
@@ -280,10 +280,14 @@ router.get("/events/:id/tests/:testId/results", (req, res) => {
   let warning: string | undefined;
   let scope: string;
   let title: string;
+  let diffNote: string | undefined;
   if (partId) {
     const part = getPart(test, partId);
     if (!part) return res.status(404).json({ error: "Parte no encontrada" });
     ({ rows, warning, scope } = computePartResults(event, test, part, fromPointId, toPointId));
+    const diff = filterNewPilotsVsEarlier(event, test, part, rows, fromPointId, toPointId);
+    rows = diff.rows;
+    diffNote = diff.diffNote;
     title = `${test.name} — ${part.name}`;
   } else {
     ({ rows, warning, scope } = computeTestResults(event, test, fromPointId, toPointId));
@@ -294,6 +298,7 @@ router.get("/events/:id/tests/:testId/results", (req, res) => {
     title,
     rows,
     warning: warning || null,
+    diffNote: diffNote || null,
     scope,
     eventName: event.name,
   });
@@ -341,6 +346,7 @@ router.get("/events/:id/tests/:testId/export/:format", async (req, res) => {
     const part = getPart(test, partId);
     if (!part) return res.status(404).json({ error: "Parte no encontrada" });
     ({ rows } = computePartResults(event, test, part, fromPointId, toPointId));
+    rows = filterNewPilotsVsEarlier(event, test, part, rows, fromPointId, toPointId).rows;
     title = `${test.name} — ${part.name}`;
   } else {
     ({ rows } = computeTestResults(event, test, fromPointId, toPointId));

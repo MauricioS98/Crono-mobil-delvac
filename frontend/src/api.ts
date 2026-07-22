@@ -107,6 +107,7 @@ export const api = {
       title: string;
       rows: ResultRow[];
       warning?: string | null;
+      diffNote?: string | null;
       scope: string;
       eventName: string;
     }>(`/events/${eventId}/tests/${testId}/results?${q}`);
@@ -191,4 +192,43 @@ export function formatOffsetInput(ms: number): string {
   const milli = abs % 1000;
   const pad = (n: number, w = 2) => String(n).padStart(w, "0");
   return `${sign}${pad(h)}:${pad(m)}:${pad(s)}.${pad(milli, 3)}`;
+}
+
+/** Parse m:ss.xxx / hh:mm:ss.xxx (same rules as backend offsets) */
+export function parseOffsetToMs(raw: string): number {
+  if (!raw || !raw.trim()) return 0;
+  let s = raw.trim().replace(",", ".");
+  const colonParts = s.split(":");
+  if (colonParts.length === 4) {
+    s = `${colonParts[0]}:${colonParts[1]}:${colonParts[2]}.${colonParts[3]}`;
+  }
+  const negative = s.startsWith("-");
+  if (negative) s = s.slice(1);
+  const parts = s.split(":");
+  let ms: number | null = null;
+  if (parts.length === 3) {
+    const h = Number(parts[0]);
+    const m = Number(parts[1]);
+    const sec = Number(parts[2]);
+    if (![h, m, sec].some((x) => Number.isNaN(x))) {
+      ms = Math.round(h * 3600000 + m * 60000 + sec * 1000);
+    }
+  } else if (parts.length === 2) {
+    const m = Number(parts[0]);
+    const sec = Number(parts[1]);
+    if (![m, sec].some((x) => Number.isNaN(x))) {
+      ms = Math.round(m * 60000 + sec * 1000);
+    }
+  } else {
+    const sec = Number(s);
+    if (!Number.isNaN(sec)) ms = Math.round(sec * 1000);
+  }
+  if (ms === null) return 0;
+  return negative ? -ms : ms;
+}
+
+/** Format penalty for the results inputs (omit leading 00: hours when possible) */
+export function formatPenaltyInput(ms: number): string {
+  if (!ms) return "";
+  return formatOffsetInput(ms).replace(/^00:/, "");
 }
