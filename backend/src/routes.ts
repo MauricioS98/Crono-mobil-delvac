@@ -13,8 +13,23 @@ import {
 import type { Event, Pilot, Test, TestPart, TimingPoint } from "./types.js";
 import { parseOffsetToMs, formatOffset } from "./timeUtils.js";
 import { parseTimingCsv } from "./csvParser.js";
-import { computePartResults, computeTestResults, computeLapByLapResults, filterNewPilotsVsEarlier, getPart, getTest, isLapScoringPart, resolveTestTimingPoints, upsertPenalty } from "./results.js";
+import {
+  assertCanDeleteEvent,
+  assertCanDeletePart,
+  assertCanDeleteTest,
+} from "./guards.js";
 import { computeFusionResults } from "./fusion.js";
+import {
+  computeLapByLapResults,
+  computePartResults,
+  computeTestResults,
+  filterNewPilotsVsEarlier,
+  getPart,
+  getTest,
+  isLapScoringPart,
+  resolveTestTimingPoints,
+  upsertPenalty,
+} from "./results.js";
 import { fusionToCsv, fusionToExcel, fusionToPdf, lapByLapToPdf, lapByLapWithHoursToPdf, resultsToCsv, resultsToExcel, resultsToPdf } from "./export.js";
 import { importPilotsFromCsv, previewPilotsCsv, type ColumnMapping } from "./pilotsCsv.js";
 
@@ -74,6 +89,10 @@ router.put("/events/:id", (req, res) => {
 });
 
 router.delete("/events/:id", (req, res) => {
+  const event = getEvent(req.params.id);
+  if (!event) return res.status(404).json({ error: "Evento no encontrado" });
+  const block = assertCanDeleteEvent(event);
+  if (block) return res.status(409).json({ error: block });
   if (!deleteEvent(req.params.id)) return res.status(404).json({ error: "Evento no encontrado" });
   res.json({ ok: true });
 });
@@ -173,6 +192,10 @@ router.put("/events/:id/tests/:testId", (req, res) => {
 router.delete("/events/:id/tests/:testId", (req, res) => {
   const event = getEvent(req.params.id);
   if (!event) return res.status(404).json({ error: "Evento no encontrado" });
+  const test = getTest(event, req.params.testId);
+  if (!test) return res.status(404).json({ error: "Prueba no encontrada" });
+  const block = assertCanDeleteTest(event, test);
+  if (block) return res.status(409).json({ error: block });
   event.tests = event.tests.filter((t) => t.id !== req.params.testId);
   saveEvent(event);
   res.json({ ok: true });
@@ -237,6 +260,10 @@ router.delete("/events/:id/tests/:testId/parts/:partId", (req, res) => {
   if (!event) return res.status(404).json({ error: "Evento no encontrado" });
   const test = getTest(event, req.params.testId);
   if (!test) return res.status(404).json({ error: "Prueba no encontrada" });
+  const part = getPart(test, req.params.partId);
+  if (!part) return res.status(404).json({ error: "Parte no encontrada" });
+  const block = assertCanDeletePart(test);
+  if (block) return res.status(409).json({ error: block });
   test.parts = test.parts.filter((p) => p.id !== req.params.partId);
   saveEvent(event);
   res.json({ ok: true });

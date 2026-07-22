@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import { api } from "../api";
+import { ConfirmDialog, type ConfirmDialogState } from "../components/ConfirmDialog";
 import type { Pilot } from "../types";
 
 const empty: Omit<Pilot, "id"> = { number: "", name: "", category: "", league: "", notes: "" };
@@ -50,6 +51,8 @@ export function EventPilotsSection({ eventId, pilots, onChange }: Props) {
   const [filterLeague, setFilterLeague] = useState("");
   const [page, setPage] = useState(1);
   const PAGE_SIZE = 10;
+  const [dialog, setDialog] = useState<ConfirmDialogState | null>(null);
+  const [dialogLoading, setDialogLoading] = useState(false);
 
   const togglePilot = (id: string) => {
     setExpandedPilots((prev) => ({ ...prev, [id]: !prev[id] }));
@@ -121,10 +124,23 @@ export function EventPilotsSection({ eventId, pilots, onChange }: Props) {
     setForm({ number: p.number, name: p.name, category: p.category, league: p.league, notes: p.notes || "" });
   };
 
-  const remove = async (pilotId: string) => {
-    if (!confirm("¿Eliminar piloto?")) return;
-    await api.deletePilot(eventId, pilotId);
-    onChange();
+  const requestRemove = (pilot: Pilot) => {
+    setDialog({
+      title: "Eliminar piloto",
+      message: `¿Eliminar al piloto N° ${pilot.number}${pilot.name ? ` — ${pilot.name}` : ""}?`,
+      variant: "danger",
+      onConfirm: async () => {
+        setDialogLoading(true);
+        try {
+          await api.deletePilot(eventId, pilot.id);
+          onChange();
+        } catch (err) {
+          setError(err instanceof Error ? err.message : "Error al eliminar");
+        } finally {
+          setDialogLoading(false);
+        }
+      },
+    });
   };
 
   const openImportAssistant = async (file: File) => {
@@ -428,7 +444,7 @@ export function EventPilotsSection({ eventId, pilots, onChange }: Props) {
                                   <button
                                     type="button"
                                     className="btn btn-danger btn-sm"
-                                    onClick={() => remove(p.id)}
+                                    onClick={() => requestRemove(p)}
                                   >
                                     Eliminar
                                   </button>
@@ -567,6 +583,14 @@ export function EventPilotsSection({ eventId, pilots, onChange }: Props) {
           </div>
         </div>
       )}
+
+      <ConfirmDialog
+        state={dialog}
+        loading={dialogLoading}
+        onClose={() => {
+          if (!dialogLoading) setDialog(null);
+        }}
+      />
     </div>
   );
 }

@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { api } from "../api";
+import { ConfirmDialog, type ConfirmDialogState } from "../components/ConfirmDialog";
 import type { FusionRow, SavedFusion, Test, TimingPoint } from "../types";
 
 interface EventFusionPanelProps {
@@ -106,7 +107,6 @@ export function EventFusionPanel({
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [deletingId, setDeletingId] = useState<string | null>(null);
   const [error, setError] = useState("");
   const [msg, setMsg] = useState("");
   const [title, setTitle] = useState("");
@@ -115,6 +115,8 @@ export function EventFusionPanel({
   const [fusionTests, setFusionTests] = useState<FusionTestMeta[]>([]);
   const [warning, setWarning] = useState("");
   const [activeSavedId, setActiveSavedId] = useState<string | null>(null);
+  const [dialog, setDialog] = useState<ConfirmDialogState | null>(null);
+  const [dialogLoading, setDialogLoading] = useState(false);
 
   const activeSaved = fusions.find((f) => f.id === activeSavedId) || null;
   const savedCount = fusions.length;
@@ -197,20 +199,26 @@ export function EventFusionPanel({
     }
   };
 
-  const deleteFusion = async (fusionId: string) => {
-    if (!window.confirm("¿Eliminar esta fusión guardada?")) return;
-    setDeletingId(fusionId);
-    setError("");
-    try {
-      await api.deleteFusion(eventId, fusionId);
-      if (activeSavedId === fusionId) setActiveSavedId(null);
-      await onReload();
-      setMsg("Fusión eliminada.");
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Error al eliminar");
-    } finally {
-      setDeletingId(null);
-    }
+  const requestDeleteFusion = (fusion: SavedFusion) => {
+    setDialog({
+      title: "Eliminar fusión",
+      message: `¿Eliminar la fusión «${fusion.name}»? Los resultados guardados se perderán.`,
+      variant: "danger",
+      onConfirm: async () => {
+        setDialogLoading(true);
+        setError("");
+        try {
+          await api.deleteFusion(eventId, fusion.id);
+          if (activeSavedId === fusion.id) setActiveSavedId(null);
+          await onReload();
+          setMsg("Fusión eliminada.");
+        } catch (e) {
+          setError(e instanceof Error ? e.message : "Error al eliminar");
+        } finally {
+          setDialogLoading(false);
+        }
+      },
+    });
   };
 
   const viewSaved = (fusion: SavedFusion) => {
@@ -362,10 +370,10 @@ export function EventFusionPanel({
                         type="button"
                         className="btn btn-ghost btn-sm fusion-saved-delete"
                         title="Eliminar"
-                        disabled={deletingId === f.id}
-                        onClick={() => deleteFusion(f.id)}
+                        disabled={dialogLoading}
+                        onClick={() => requestDeleteFusion(f)}
                       >
-                        {deletingId === f.id ? "…" : "✕"}
+                        {dialogLoading ? "…" : "✕"}
                       </button>
                     </div>
                   ))}
@@ -436,6 +444,14 @@ export function EventFusionPanel({
           )}
         </div>
       </aside>
+
+      <ConfirmDialog
+        state={dialog}
+        loading={dialogLoading}
+        onClose={() => {
+          if (!dialogLoading) setDialog(null);
+        }}
+      />
     </>
   );
 }

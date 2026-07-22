@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { api, formatOffsetInput, formatPenaltyInput, parseOffsetToMs } from "../api";
+import { ConfirmDialog, type ConfirmDialogState } from "../components/ConfirmDialog";
+import { canDeletePart, canDeleteTest } from "../lib/deleteGuards";
 import type { Event, ResultRow, Test, TestPart, TimingPoint } from "../types";
 import { EventPilotsSection } from "./EventPilotsSection";
 import { EventFusionPanel } from "./EventFusionPanel";
@@ -51,6 +53,8 @@ export function EventDetailPage() {
     Record<string, { timePenalty: string; positionPenalty: string; comment: string }>
   >({});
   const [savingPenalty, setSavingPenalty] = useState<string | null>(null);
+  const [dialog, setDialog] = useState<ConfirmDialogState | null>(null);
+  const [dialogLoading, setDialogLoading] = useState(false);
 
   const load = useCallback(async () => {
     if (!id) return;
@@ -211,6 +215,72 @@ export function EventDetailPage() {
     const t = (await api.createTest(event.id, name)) as Test;
     await load();
     setExpandedTests((prev) => ({ ...prev, [t.id]: true }));
+  };
+
+  const requestDeleteTest = (test: Test) => {
+    if (!event) return;
+    const block = canDeleteTest(event, test);
+    if (block) {
+      setDialog({
+        title: "No se puede eliminar",
+        message: block,
+        variant: "alert",
+        onConfirm: () => {},
+      });
+      return;
+    }
+    setDialog({
+      title: "Eliminar prueba",
+      message: `¿Eliminar «${test.name}»? Esta acción no se puede deshacer.`,
+      variant: "danger",
+      onConfirm: async () => {
+        setDialogLoading(true);
+        try {
+          await api.deleteTest(event.id, test.id);
+          setExpandedTests((prev) => {
+            const next = { ...prev };
+            delete next[test.id];
+            return next;
+          });
+          await load();
+        } catch (e) {
+          setError(e instanceof Error ? e.message : "Error al eliminar prueba");
+        } finally {
+          setDialogLoading(false);
+        }
+      },
+    });
+  };
+
+  const requestDeletePart = (test: Test, part: TestPart) => {
+    if (!event) return;
+    const block = canDeletePart(test);
+    if (block) {
+      setDialog({
+        title: "No se puede eliminar",
+        message: block,
+        variant: "alert",
+        onConfirm: () => {},
+      });
+      return;
+    }
+    setDialog({
+      title: "Eliminar salida",
+      message: `¿Eliminar «${part.name}»? Se perderán los CSV cargados en esta salida.`,
+      variant: "danger",
+      onConfirm: async () => {
+        setDialogLoading(true);
+        try {
+          await api.deletePart(event.id, test.id, part.id);
+          setPartByTest((prev) => ({ ...prev, [test.id]: null }));
+          await load();
+        } catch (e) {
+          setError(e instanceof Error ? e.message : "Error al eliminar salida");
+        } finally {
+          setDialogLoading(false);
+        }
+      },
+    });
   };
 
   const addPart = async (testId: string) => {
@@ -440,16 +510,7 @@ export function EventDetailPage() {
                         </button>
                         <button
                           className="btn btn-danger btn-sm"
-                          onClick={async () => {
-                            if (!confirm("¿Eliminar prueba?")) return;
-                            await api.deleteTest(event.id, test.id);
-                            setExpandedTests((prev) => {
-                              const next = { ...prev };
-                              delete next[test.id];
-                              return next;
-                            });
-                            load();
-                          }}
+                          onClick={() => requestDeleteTest(test)}
                         >
                           Eliminar prueba
                         </button>
@@ -573,12 +634,7 @@ export function EventDetailPage() {
                                   </button>
                                   <button
                                     className="btn btn-danger btn-sm"
-                                    onClick={async () => {
-                                      if (!confirm("¿Eliminar parte?")) return;
-                                      await api.deletePart(event.id, test.id, selectedPart.id);
-                                      setPartByTest((prev) => ({ ...prev, [test.id]: null }));
-                                      load();
-                                    }}
+                                    onClick={() => requestDeletePart(test, selectedPart)}
                                   >
                                     Eliminar parte
                                   </button>
@@ -1052,6 +1108,14 @@ export function EventDetailPage() {
         points={points}
         fusions={event.fusions || []}
         onReload={load}
+      />
+
+      <ConfirmDialog
+        state={dialog}
+        loading={dialogLoading}
+        onClose={() => {
+          if (!dialogLoading) setDialog(null);
+        }}
       />
     </div>
   );

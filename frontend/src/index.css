@@ -789,6 +789,54 @@ tr:hover td {
   flex-wrap: wrap;
 }
 
+.confirm-dialog {
+  width: min(440px, 100%);
+  text-align: center;
+  padding: 1.5rem 1.35rem 1.25rem;
+}
+
+.confirm-dialog h2 {
+  font-size: 1.15rem;
+  margin-bottom: 0;
+}
+
+.confirm-dialog-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.75rem;
+  height: 2.75rem;
+  margin: 0 auto 0.65rem;
+  border-radius: 999px;
+  font-size: 1.35rem;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.confirm-danger .confirm-dialog-icon {
+  background: rgba(232, 93, 93, 0.15);
+  color: #f08080;
+  border: 1px solid rgba(232, 93, 93, 0.35);
+}
+
+.confirm-alert .confirm-dialog-icon {
+  background: rgba(196, 160, 53, 0.15);
+  color: var(--accent-hot);
+  border: 1px solid rgba(196, 160, 53, 0.4);
+}
+
+.confirm-dialog-message {
+  margin: 0.65rem 0 0;
+  font-size: 0.9rem;
+  line-height: 1.55;
+  color: var(--muted);
+}
+
+.confirm-dialog-actions {
+  justify-content: center;
+  margin-top: 1.25rem;
+}
+
 .map-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;

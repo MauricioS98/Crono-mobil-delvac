@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { api } from "../api";
+import { ConfirmDialog, type ConfirmDialogState } from "../components/ConfirmDialog";
+import { canDeleteEvent } from "../lib/deleteGuards";
 import type { Event } from "../types";
 
 export function EventsPage() {
@@ -11,6 +13,8 @@ export function EventsPage() {
   const [location, setLocation] = useState("");
   const [error, setError] = useState("");
   const [creating, setCreating] = useState(false);
+  const [dialog, setDialog] = useState<ConfirmDialogState | null>(null);
+  const [dialogLoading, setDialogLoading] = useState(false);
 
   const load = async () => {
     try {
@@ -42,10 +46,33 @@ export function EventsPage() {
     }
   };
 
-  const remove = async (id: string, label: string) => {
-    if (!confirm(`¿Eliminar el evento "${label}"?`)) return;
-    await api.deleteEvent(id);
-    load();
+  const requestRemove = (ev: Event) => {
+    const block = canDeleteEvent(ev);
+    if (block) {
+      setDialog({
+        title: "No se puede eliminar",
+        message: block,
+        variant: "alert",
+        onConfirm: () => {},
+      });
+      return;
+    }
+    setDialog({
+      title: "Eliminar evento",
+      message: `¿Eliminar «${ev.name}»? Se borrarán todos los datos del evento. Esta acción no se puede deshacer.`,
+      variant: "danger",
+      onConfirm: async () => {
+        setDialogLoading(true);
+        try {
+          await api.deleteEvent(ev.id);
+          await load();
+        } catch (err) {
+          setError(err instanceof Error ? err.message : "Error al eliminar");
+        } finally {
+          setDialogLoading(false);
+        }
+      },
+    });
   };
 
   return (
@@ -92,13 +119,21 @@ export function EventsPage() {
                   <span className="chip">{ev.timingPoints.length} puntos</span>
                 </div>
               </Link>
-              <button className="btn btn-danger btn-sm" onClick={() => remove(ev.id, ev.name)}>
+              <button className="btn btn-danger btn-sm" onClick={() => requestRemove(ev)}>
                 Eliminar
               </button>
             </div>
           ))}
         </div>
       </div>
+
+      <ConfirmDialog
+        state={dialog}
+        loading={dialogLoading}
+        onClose={() => {
+          if (!dialogLoading) setDialog(null);
+        }}
+      />
     </div>
   );
 }
