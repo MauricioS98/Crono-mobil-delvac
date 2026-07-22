@@ -59,6 +59,27 @@ export interface TestPart {
   csvs: PartCsvSlot[];
 }
 
+export interface FusionTestTime {
+  testId: string;
+  testName: string;
+  segmentLabel: string;
+  timeMs: number | null;
+  timeFormatted: string;
+  laps?: number;
+}
+
+export interface FusionRow {
+  position: number;
+  number: string;
+  name: string;
+  category: string;
+  league: string;
+  totalTimeMs: number;
+  totalTimeFormatted: string;
+  testsCount: number;
+  byTest: FusionTestTime[];
+}
+
 export interface PilotPenalty {
   number: string;
   /** Kept for compatibility; penalties are shared per pilot in the test */
@@ -74,8 +95,20 @@ export interface Test {
   description: string;
   showDescriptionInPdf: boolean;
   order: number;
+  fromPointId?: string | null;
+  toPointId?: string | null;
   parts: TestPart[];
   penalties: PilotPenalty[];
+}
+
+export interface SavedFusion {
+  id: string;
+  name: string;
+  testIds: string[];
+  tests: { id: string; name: string; segmentLabel: string }[];
+  rows: FusionRow[];
+  warning?: string | null;
+  createdAt: string;
 }
 
 export interface Event {
@@ -88,6 +121,7 @@ export interface Event {
   timingPoints: TimingPoint[];
   pilots: Pilot[];
   tests: Test[];
+  fusions?: SavedFusion[];
   createdAt: string;
   updatedAt: string;
 }

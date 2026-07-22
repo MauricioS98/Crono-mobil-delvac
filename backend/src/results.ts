@@ -15,6 +15,33 @@ export const UNIFIED_SCOPE = "unified";
 /** Single shared penalty per pilot within a test (salida ↔ unificado) */
 export const SHARED_PENALTY_SCOPE = "shared";
 
+/** Resolve Desde/Hasta for a test (stored config, then query override, then defaults) */
+export function resolveTestTimingPoints(
+  event: Event,
+  test: Test,
+  fromOverride?: string,
+  toOverride?: string
+): { fromId: string | undefined; toId: string | undefined } {
+  const points = [...event.timingPoints].sort((a, b) => a.order - b.order);
+  return {
+    fromId: fromOverride || test.fromPointId || points[0]?.id,
+    toId: toOverride || test.toPointId || points[1]?.id,
+  };
+}
+
+export function segmentLabelForTest(
+  event: Event,
+  test: Test,
+  fromOverride?: string,
+  toOverride?: string
+): string {
+  const { fromId, toId } = resolveTestTimingPoints(event, test, fromOverride, toOverride);
+  const points = event.timingPoints;
+  const fromName = points.find((p) => p.id === fromId)?.name ?? "Desde";
+  const toName = points.find((p) => p.id === toId)?.name ?? "Hasta";
+  return `${fromName} → ${toName}`;
+}
+
 function pickName(a: string, b?: string): string {
   return a || b || "";
 }

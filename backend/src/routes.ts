@@ -13,8 +13,9 @@ import {
 import type { Event, Pilot, Test, TestPart, TimingPoint } from "./types.js";
 import { parseOffsetToMs, formatOffset } from "./timeUtils.js";
 import { parseTimingCsv } from "./csvParser.js";
-import { computePartResults, computeTestResults, filterNewPilotsVsEarlier, getPart, getTest, upsertPenalty } from "./results.js";
-import { resultsToCsv, resultsToExcel, resultsToPdf } from "./export.js";
+import { computePartResults, computeTestResults, filterNewPilotsVsEarlier, getPart, getTest, resolveTestTimingPoints, upsertPenalty } from "./results.js";
+import { computeFusionResults } from "./fusion.js";
+import { fusionToCsv, fusionToExcel, fusionToPdf, resultsToCsv, resultsToExcel, resultsToPdf } from "./export.js";
 import { importPilotsFromCsv, previewPilotsCsv, type ColumnMapping } from "./pilotsCsv.js";
 
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 20 * 1024 * 1024 } });
@@ -35,6 +36,7 @@ function emptyEvent(body: Partial<Event>): Event {
     ],
     pilots: [],
     tests: [],
+    fusions: [],
     createdAt: now,
     updatedAt: now,
   };
@@ -135,6 +137,8 @@ router.post("/events/:id/tests", (req, res) => {
     description: req.body.description || "",
     showDescriptionInPdf: Boolean(req.body.showDescriptionInPdf),
     order: event.tests.length,
+    fromPointId: event.timingPoints[0]?.id ?? null,
+    toPointId: event.timingPoints[1]?.id ?? null,
     parts: [],
     penalties: [],
   };
@@ -152,6 +156,12 @@ router.put("/events/:id/tests/:testId", (req, res) => {
   if (req.body.description != null) test.description = String(req.body.description);
   if (req.body.showDescriptionInPdf != null) {
     test.showDescriptionInPdf = Boolean(req.body.showDescriptionInPdf);
+  }
+  if (req.body.fromPointId !== undefined) {
+    test.fromPointId = req.body.fromPointId || null;
+  }
+  if (req.body.toPointId !== undefined) {
+    test.toPointId = req.body.toPointId || null;
   }
   // Backfill for older events
   if (test.description == null) test.description = "";
@@ -297,6 +307,7 @@ router.get("/events/:id/tests/:testId/results", (req, res) => {
   const fromPointId = req.query.from as string | undefined;
   const toPointId = req.query.to as string | undefined;
   const partId = req.query.partId as string | undefined;
+  const { fromId, toId } = resolveTestTimingPoints(event, test, fromPointId, toPointId);
 
   let rows;
   let warning: string | undefined;
@@ -306,13 +317,13 @@ router.get("/events/:id/tests/:testId/results", (req, res) => {
   if (partId) {
     const part = getPart(test, partId);
     if (!part) return res.status(404).json({ error: "Parte no encontrada" });
-    ({ rows, warning, scope } = computePartResults(event, test, part, fromPointId, toPointId));
-    const diff = filterNewPilotsVsEarlier(event, test, part, rows, fromPointId, toPointId);
+    ({ rows, warning, scope } = computePartResults(event, test, part, fromId, toId));
+    const diff = filterNewPilotsVsEarlier(event, test, part, rows, fromId, toId);
     rows = diff.rows;
     diffNote = diff.diffNote;
     title = `${test.name} — ${part.name}`;
   } else {
-    ({ rows, warning, scope } = computeTestResults(event, test, fromPointId, toPointId));
+    ({ rows, warning, scope } = computeTestResults(event, test, fromId, toId));
     title = `${test.name} — Resultado unificado`;
   }
 
@@ -324,6 +335,142 @@ router.get("/events/:id/tests/:testId/results", (req, res) => {
     scope,
     eventName: event.name,
   });
+});
+
+router.get("/events/:id/fusion", (req, res) => {
+  const event = getEvent(req.params.id);
+  if (!event) return res.status(404).json({ error: "Evento no encontrado" });
+
+  const raw = req.query.tests;
+  const testIds = Array.isArray(raw)
+    ? raw.flatMap((v) => String(v).split(","))
+    : String(raw || "")
+        .split(",")
+        .map((s) => s.trim())
+        .filter(Boolean);
+
+  const result = computeFusionResults(event, testIds);
+  res.json({
+    ...result,
+    warning: result.warning || null,
+    eventName: event.name,
+  });
+});
+
+function parseFusionTestIds(raw: unknown): string[] {
+  if (Array.isArray(raw)) return raw.flatMap((v) => String(v).split(",")).map((s) => s.trim()).filter(Boolean);
+  return String(raw || "")
+    .split(",")
+    .map((s) => s.trim())
+    .filter(Boolean);
+}
+
+async function sendFusionExport(
+  res: import("express").Response,
+  event: Event,
+  fusionName: string,
+  tests: { id: string; name: string; segmentLabel: string }[],
+  rows: import("./types.js").FusionRow[],
+  format: string
+) {
+  const title = fusionName;
+  const safeName = title.replace(/[^\w\-]+/g, "_");
+
+  if (format === "csv") {
+    const csv = fusionToCsv(rows, tests, title);
+    res.setHeader("Content-Type", "text/csv; charset=utf-8");
+    res.setHeader("Content-Disposition", `attachment; filename="${safeName}.csv"`);
+    return res.send("\uFEFF" + csv);
+  }
+  if (format === "xlsx" || format === "excel") {
+    const buf = await fusionToExcel(rows, tests, title, event.name);
+    res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+    res.setHeader("Content-Disposition", `attachment; filename="${safeName}.xlsx"`);
+    return res.send(buf);
+  }
+  if (format === "pdf") {
+    const buf = await fusionToPdf(rows, tests, title, event);
+    res.setHeader("Content-Type", "application/pdf");
+    res.setHeader("Content-Disposition", `attachment; filename="${safeName}.pdf"`);
+    return res.send(buf);
+  }
+  return res.status(400).json({ error: "Formato no soportado (csv|xlsx|pdf)" });
+}
+
+router.get("/events/:id/fusion/export/:format", async (req, res) => {
+  const event = getEvent(req.params.id);
+  if (!event) return res.status(404).json({ error: "Evento no encontrado" });
+
+  const testIds = parseFusionTestIds(req.query.tests);
+  const result = computeFusionResults(event, testIds);
+  if (result.rows.length === 0) {
+    return res.status(400).json({ error: result.warning || "Sin resultados para exportar" });
+  }
+
+  const name = String(req.query.name || result.title).trim() || result.title;
+
+  try {
+    return await sendFusionExport(res, event, name, result.tests, result.rows, req.params.format);
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ error: "Error al exportar" });
+  }
+});
+
+router.post("/events/:id/fusions", (req, res) => {
+  const event = getEvent(req.params.id);
+  if (!event) return res.status(404).json({ error: "Evento no encontrado" });
+
+  const name = String(req.body.name || "").trim();
+  if (!name) return res.status(400).json({ error: "Indica un nombre para la fusión" });
+
+  const testIds = parseFusionTestIds(req.body.testIds);
+  const result = computeFusionResults(event, testIds);
+  if (result.rows.length === 0) {
+    return res.status(400).json({ error: result.warning || "Sin resultados para guardar" });
+  }
+
+  if (!event.fusions) event.fusions = [];
+  const saved = {
+    id: uuid(),
+    name,
+    testIds: result.tests.map((t) => t.id),
+    tests: result.tests,
+    rows: result.rows,
+    warning: result.warning || null,
+    createdAt: new Date().toISOString(),
+  };
+  event.fusions.push(saved);
+  saveEvent(event);
+  res.status(201).json(saved);
+});
+
+router.delete("/events/:id/fusions/:fusionId", (req, res) => {
+  const event = getEvent(req.params.id);
+  if (!event) return res.status(404).json({ error: "Evento no encontrado" });
+
+  const before = event.fusions?.length || 0;
+  event.fusions = (event.fusions || []).filter((f) => f.id !== req.params.fusionId);
+  if (event.fusions.length === before) {
+    return res.status(404).json({ error: "Fusión no encontrada" });
+  }
+  saveEvent(event);
+  res.json({ ok: true });
+});
+
+router.get("/events/:id/fusions/:fusionId/export/:format", async (req, res) => {
+  const event = getEvent(req.params.id);
+  if (!event) return res.status(404).json({ error: "Evento no encontrado" });
+
+  const fusion = (event.fusions || []).find((f) => f.id === req.params.fusionId);
+  if (!fusion) return res.status(404).json({ error: "Fusión no encontrada" });
+
+  try {
+    return await sendFusionExport(res, event, fusion.name, fusion.tests, fusion.rows, req.params.format);
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ error: "Error al exportar" });
+  }
 });
 
 router.put("/events/:id/tests/:testId/penalties", (req, res) => {
@@ -361,17 +508,18 @@ router.get("/events/:id/tests/:testId/export/:format", async (req, res) => {
   const fromPointId = req.query.from as string | undefined;
   const toPointId = req.query.to as string | undefined;
   const partId = req.query.partId as string | undefined;
+  const { fromId, toId } = resolveTestTimingPoints(event, test, fromPointId, toPointId);
 
   let rows;
   let title: string;
   if (partId) {
     const part = getPart(test, partId);
     if (!part) return res.status(404).json({ error: "Parte no encontrada" });
-    ({ rows } = computePartResults(event, test, part, fromPointId, toPointId));
-    rows = filterNewPilotsVsEarlier(event, test, part, rows, fromPointId, toPointId).rows;
+    ({ rows } = computePartResults(event, test, part, fromId, toId));
+    rows = filterNewPilotsVsEarlier(event, test, part, rows, fromId, toId).rows;
     title = `${test.name} — ${part.name}`;
   } else {
-    ({ rows } = computeTestResults(event, test, fromPointId, toPointId));
+    ({ rows } = computeTestResults(event, test, fromId, toId));
     title = `${test.name} — Resultado unificado`;
   }
 

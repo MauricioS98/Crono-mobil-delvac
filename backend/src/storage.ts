@@ -37,6 +37,7 @@ export function getEvent(id: string): Event | null {
   if (!fs.existsSync(file)) return null;
   const event = JSON.parse(fs.readFileSync(file, "utf-8")) as Event;
   event.pilots = event.pilots || [];
+  event.fusions = event.fusions || [];
   event.tests = (event.tests || []).map((t) => ({
     ...t,
     description: t.description ?? "",
@@ -47,6 +48,8 @@ export function getEvent(id: string): Event | null {
       combinedScoring: p.combinedScoring ?? (p.combinedMode ? "time" : undefined),
       expectedLaps: p.expectedLaps ?? null,
     })),
+    fromPointId: t.fromPointId ?? null,
+    toPointId: t.toPointId ?? null,
   }));
   return event;
 }

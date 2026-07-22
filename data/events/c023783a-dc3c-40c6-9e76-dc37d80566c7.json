@@ -8,13 +8,13 @@
   "timingPoints": [
     {
       "id": "b5454e99-d38b-4ba7-a5cd-1cf12736fdc7",
-      "name": "PC A",
+      "name": "Tortugas",
       "offsetMs": 0,
       "order": 0
     },
     {
       "id": "063b9908-44bb-4a82-8ff7-760787a7fa63",
-      "name": "PC B",
+      "name": "Curva motor",
       "offsetMs": 0,
       "order": 1
     },
@@ -799,11 +799,344 @@
       ],
       "description": "vfdfbfdfg",
       "showDescriptionInPdf": true,
-      "penalties": []
+      "penalties": [
+        {
+          "number": "95",
+          "scope": "shared",
+          "timePenaltyMs": 15000,
+          "positionPenalty": 0,
+          "comment": ""
+        }
+      ],
+      "fromPointId": null,
+      "toPointId": "063b9908-44bb-4a82-8ff7-760787a7fa63"
+    },
+    {
+      "id": "4ba5b3ff-6239-4914-8aa0-3e88c980550e",
+      "name": "Prueba 2",
+      "description": "",
+      "showDescriptionInPdf": false,
+      "order": 1,
+      "fromPointId": "b5454e99-d38b-4ba7-a5cd-1cf12736fdc7",
+      "toPointId": "f6e2040b-8b32-43b0-81b3-b3bfa968fdea",
+      "parts": [
+        {
+          "id": "30fbc964-22c6-4df4-91e8-fd50e4663800",
+          "name": "Salida 1",
+          "order": 0,
+          "combinedMode": false,
+          "expectedLaps": null,
+          "csvs": [
+            {
+              "timingPointId": "b5454e99-d38b-4ba7-a5cd-1cf12736fdc7",
+              "filename": "0 - BD - DOMINGO 3.csv",
+              "parsed": {
+                "filename": "0 - BD - DOMINGO 3.csv",
+                "passages": [
+                  {
+                    "number": "42",
+                    "name": "",
+                    "tmPasosMs": 65864627,
+                    "tmPasosRaw": "18:17:44.627",
+                    "lapTimeMs": null,
+                    "lapTimeRaw": "",
+                    "lapsCount": 0,
+                    "elapsedMs": 0,
+                    "clase": "",
+                    "rowIndex": 3
+                  },
+                  {
+                    "number": "44",
+                    "name": "",
+                    "tmPasosMs": 65866181,
+                    "tmPasosRaw": "18:17:46.181",
+                    "lapTimeMs": null,
+                    "lapTimeRaw": "",
+                    "lapsCount": 0,
+                    "elapsedMs": 1554,
+                    "clase": "",
+                    "rowIndex": 4
+                  },
+                  {
+                    "number": "43",
+                    "name": "",
+                    "tmPasosMs": 65867272,
+                    "tmPasosRaw": "18:17:47.272",
+                    "lapTimeMs": null,
+                    "lapTimeRaw": "",
+                    "lapsCount": 0,
+                    "elapsedMs": 2645,
+                    "clase": "",
+                    "rowIndex": 5
+                  },
+                  {
+                    "number": "45",
+                    "name": "",
+                    "tmPasosMs": 65868539,
+                    "tmPasosRaw": "18:17:48.539",
+                    "lapTimeMs": null,
+                    "lapTimeRaw": "",
+                    "lapsCount": 0,
+                    "elapsedMs": 3912,
+                    "clase": "",
+                    "rowIndex": 6
+                  },
+                  {
+                    "number": "46",
+                    "name": "",
+                    "tmPasosMs": 65869485,
+                    "tmPasosRaw": "18:17:49.485",
+                    "lapTimeMs": null,
+                    "lapTimeRaw": "",
+                    "lapsCount": 0,
+                    "elapsedMs": 4858,
+                    "clase": "",
+                    "rowIndex": 7
+                  }
+                ],
+                "flags": [
+                  {
+                    "type": "warmup",
+                    "tmPasosMs": 65860767,
+                    "tmPasosRaw": "18:17:40.767",
+                    "label": "Bandera de Calentamiento",
+                    "rowIndex": 1
+                  },
+                  {
+                    "type": "green",
+                    "tmPasosMs": 65862101,
+                    "tmPasosRaw": "18:17:42.101",
+                    "label": "Bandera Verde",
+                    "rowIndex": 2
+                  }
+                ],
+                "racePassages": [
+                  {
+                    "number": "42",
+                    "name": "",
+                    "tmPasosMs": 65864627,
+                    "tmPasosRaw": "18:17:44.627",
+                    "lapTimeMs": null,
+                    "lapTimeRaw": "",
+                    "lapsCount": 0,
+                    "elapsedMs": 0,
+                    "clase": "",
+                    "rowIndex": 3
+                  },
+                  {
+                    "number": "44",
+                    "name": "",
+                    "tmPasosMs": 65866181,
+                    "tmPasosRaw": "18:17:46.181",
+                    "lapTimeMs": null,
+                    "lapTimeRaw": "",
+                    "lapsCount": 0,
+                    "elapsedMs": 1554,
+                    "clase": "",
+                    "rowIndex": 4
+                  },
+                  {
+                    "number": "43",
+                    "name": "",
+                    "tmPasosMs": 65867272,
+                    "tmPasosRaw": "18:17:47.272",
+                    "lapTimeMs": null,
+                    "lapTimeRaw": "",
+                    "lapsCount": 0,
+                    "elapsedMs": 2645,
+                    "clase": "",
+                    "rowIndex": 5
+                  },
+                  {
+                    "number": "45",
+                    "name": "",
+                    "tmPasosMs": 65868539,
+                    "tmPasosRaw": "18:17:48.539",
+                    "lapTimeMs": null,
+                    "lapTimeRaw": "",
+                    "lapsCount": 0,
+                    "elapsedMs": 3912,
+                    "clase": "",
+                    "rowIndex": 6
+                  },
+                  {
+                    "number": "46",
+                    "name": "",
+                    "tmPasosMs": 65869485,
+                    "tmPasosRaw": "18:17:49.485",
+                    "lapTimeMs": null,
+                    "lapTimeRaw": "",
+                    "lapsCount": 0,
+                    "elapsedMs": 4858,
+                    "clase": "",
+                    "rowIndex": 7
+                  }
+                ]
+              }
+            },
+            {
+              "timingPointId": "f6e2040b-8b32-43b0-81b3-b3bfa968fdea",
+              "filename": "0 - BD - DOMINGO 4.csv",
+              "parsed": {
+                "filename": "0 - BD - DOMINGO 4.csv",
+                "passages": [
+                  {
+                    "number": "42",
+                    "name": "",
+                    "tmPasosMs": 65897797,
+                    "tmPasosRaw": "18:18:17.797",
+                    "lapTimeMs": null,
+                    "lapTimeRaw": "",
+                    "lapsCount": 0,
+                    "elapsedMs": 0,
+                    "clase": "",
+                    "rowIndex": 3
+                  },
+                  {
+                    "number": "43",
+                    "name": "",
+                    "tmPasosMs": 65898008,
+                    "tmPasosRaw": "18:18:18.008",
+                    "lapTimeMs": null,
+                    "lapTimeRaw": "",
+                    "lapsCount": 0,
+                    "elapsedMs": 211,
+                    "clase": "",
+                    "rowIndex": 4
+                  },
+                  {
+                    "number": "44",
+                    "name": "",
+                    "tmPasosMs": 65898233,
+                    "tmPasosRaw": "18:18:18.233",
+                    "lapTimeMs": null,
+                    "lapTimeRaw": "",
+                    "lapsCount": 0,
+                    "elapsedMs": 436,
+                    "clase": "",
+                    "rowIndex": 5
+                  },
+                  {
+                    "number": "45",
+                    "name": "",
+                    "tmPasosMs": 65898432,
+                    "tmPasosRaw": "18:18:18.432",
+                    "lapTimeMs": null,
+                    "lapTimeRaw": "",
+                    "lapsCount": 0,
+                    "elapsedMs": 635,
+                    "clase": "",
+                    "rowIndex": 6
+                  },
+                  {
+                    "number": "46",
+                    "name": "",
+                    "tmPasosMs": 65898843,
+                    "tmPasosRaw": "18:18:18.843",
+                    "lapTimeMs": null,
+                    "lapTimeRaw": "",
+                    "lapsCount": 0,
+                    "elapsedMs": 1046,
+                    "clase": "",
+                    "rowIndex": 7
+                  }
+                ],
+                "flags": [
+                  {
+                    "type": "warmup",
+                    "tmPasosMs": 65894842,
+                    "tmPasosRaw": "18:18:14.842",
+                    "label": "Bandera de Calentamiento",
+                    "rowIndex": 1
+                  },
+                  {
+                    "type": "green",
+                    "tmPasosMs": 65895126,
+                    "tmPasosRaw": "18:18:15.126",
+                    "label": "Bandera Verde",
+                    "rowIndex": 2
+                  }
+                ],
+                "racePassages": [
+                  {
+                    "number": "42",
+                    "name": "",
+                    "tmPasosMs": 65897797,
+                    "tmPasosRaw": "18:18:17.797",
+                    "lapTimeMs": null,
+                    "lapTimeRaw": "",
+                    "lapsCount": 0,
+                    "elapsedMs": 0,
+                    "clase": "",
+                    "rowIndex": 3
+                  },
+                  {
+                    "number": "43",
+                    "name": "",
+                    "tmPasosMs": 65898008,
+                    "tmPasosRaw": "18:18:18.008",
+                    "lapTimeMs": null,
+                    "lapTimeRaw": "",
+                    "lapsCount": 0,
+                    "elapsedMs": 211,
+                    "clase": "",
+                    "rowIndex": 4
+                  },
+                  {
+                    "number": "44",
+                    "name": "",
+                    "tmPasosMs": 65898233,
+                    "tmPasosRaw": "18:18:18.233",
+                    "lapTimeMs": null,
+                    "lapTimeRaw": "",
+                    "lapsCount": 0,
+                    "elapsedMs": 436,
+                    "clase": "",
+                    "rowIndex": 5
+                  },
+                  {
+                    "number": "45",
+                    "name": "",
+                    "tmPasosMs": 65898432,
+                    "tmPasosRaw": "18:18:18.432",
+                    "lapTimeMs": null,
+                    "lapTimeRaw": "",
+                    "lapsCount": 0,
+                    "elapsedMs": 635,
+                    "clase": "",
+                    "rowIndex": 6
+                  },
+                  {
+                    "number": "46",
+                    "name": "",
+                    "tmPasosMs": 65898843,
+                    "tmPasosRaw": "18:18:18.843",
+                    "lapTimeMs": null,
+                    "lapTimeRaw": "",
+                    "lapsCount": 0,
+                    "elapsedMs": 1046,
+                    "clase": "",
+                    "rowIndex": 7
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      ],
+      "penalties": [
+        {
+          "number": "46",
+          "scope": "shared",
+          "timePenaltyMs": 45000,
+          "positionPenalty": 0,
+          "comment": ""
+        }
+      ]
     }
   ],
   "createdAt": "2026-07-21T23:15:14.087Z",
-  "updatedAt": "2026-07-22T07:35:17.452Z",
+  "updatedAt": "2026-07-22T08:07:07.737Z",
   "pilots": [
     {
       "id": "a7f13157-9a69-4c92-a2a3-29d59c386e53",
@@ -1076,6 +1409,576 @@
       "category": "150 cc",
       "league": "Cundi",
       "notes": "sdasd"
+    }
+  ],
+  "fusions": [
+    {
+      "id": "8ab2fc22-b16f-41b9-bb6c-fc4a14379139",
+      "name": "gnvbnhhh",
+      "testIds": [
+        "4e94c8fd-ba44-43ae-96c9-39372a92570a",
+        "4ba5b3ff-6239-4914-8aa0-3e88c980550e"
+      ],
+      "tests": [
+        {
+          "id": "4e94c8fd-ba44-43ae-96c9-39372a92570a",
+          "name": "Prueba 1",
+          "segmentLabel": "Tortugas → Curva motor"
+        },
+        {
+          "id": "4ba5b3ff-6239-4914-8aa0-3e88c980550e",
+          "name": "Prueba 2",
+          "segmentLabel": "Tortugas → PC D"
+        }
+      ],
+      "rows": [
+        {
+          "position": 1,
+          "number": "94",
+          "name": "",
+          "category": "",
+          "league": "",
+          "totalTimeMs": 31360,
+          "totalTimeFormatted": "00:31.360",
+          "testsCount": 1,
+          "byTest": [
+            {
+              "testId": "4e94c8fd-ba44-43ae-96c9-39372a92570a",
+              "testName": "Prueba 1",
+              "segmentLabel": "Tortugas → Curva motor",
+              "timeMs": 31360,
+              "timeFormatted": "00:31.360"
+            },
+            {
+              "testId": "4ba5b3ff-6239-4914-8aa0-3e88c980550e",
+              "testName": "Prueba 2",
+              "segmentLabel": "Tortugas → PC D",
+              "timeMs": null,
+              "timeFormatted": "—"
+            }
+          ]
+        },
+        {
+          "position": 2,
+          "number": "93",
+          "name": "",
+          "category": "",
+          "league": "",
+          "totalTimeMs": 32234,
+          "totalTimeFormatted": "00:32.234",
+          "testsCount": 1,
+          "byTest": [
+            {
+              "testId": "4e94c8fd-ba44-43ae-96c9-39372a92570a",
+              "testName": "Prueba 1",
+              "segmentLabel": "Tortugas → Curva motor",
+              "timeMs": 32234,
+              "timeFormatted": "00:32.234"
+            },
+            {
+              "testId": "4ba5b3ff-6239-4914-8aa0-3e88c980550e",
+              "testName": "Prueba 2",
+              "segmentLabel": "Tortugas → PC D",
+              "timeMs": null,
+              "timeFormatted": "—"
+            }
+          ]
+        },
+        {
+          "position": 3,
+          "number": "92",
+          "name": "",
+          "category": "",
+          "league": "",
+          "totalTimeMs": 34236,
+          "totalTimeFormatted": "00:34.236",
+          "testsCount": 1,
+          "byTest": [
+            {
+              "testId": "4e94c8fd-ba44-43ae-96c9-39372a92570a",
+              "testName": "Prueba 1",
+              "segmentLabel": "Tortugas → Curva motor",
+              "timeMs": 34236,
+              "timeFormatted": "00:34.236"
+            },
+            {
+              "testId": "4ba5b3ff-6239-4914-8aa0-3e88c980550e",
+              "testName": "Prueba 2",
+              "segmentLabel": "Tortugas → PC D",
+              "timeMs": null,
+              "timeFormatted": "—"
+            }
+          ]
+        },
+        {
+          "position": 4,
+          "number": "91",
+          "name": "",
+          "category": "",
+          "league": "",
+          "totalTimeMs": 36759,
+          "totalTimeFormatted": "00:36.759",
+          "testsCount": 1,
+          "byTest": [
+            {
+              "testId": "4e94c8fd-ba44-43ae-96c9-39372a92570a",
+              "testName": "Prueba 1",
+              "segmentLabel": "Tortugas → Curva motor",
+              "timeMs": 36759,
+              "timeFormatted": "00:36.759"
+            },
+            {
+              "testId": "4ba5b3ff-6239-4914-8aa0-3e88c980550e",
+              "testName": "Prueba 2",
+              "segmentLabel": "Tortugas → PC D",
+              "timeMs": null,
+              "timeFormatted": "—"
+            }
+          ]
+        },
+        {
+          "position": 5,
+          "number": "95",
+          "name": "Pepi",
+          "category": "150 cc",
+          "league": "Cundi",
+          "totalTimeMs": 44101,
+          "totalTimeFormatted": "00:44.101",
+          "testsCount": 1,
+          "byTest": [
+            {
+              "testId": "4e94c8fd-ba44-43ae-96c9-39372a92570a",
+              "testName": "Prueba 1",
+              "segmentLabel": "Tortugas → Curva motor",
+              "timeMs": 44101,
+              "timeFormatted": "00:44.101"
+            },
+            {
+              "testId": "4ba5b3ff-6239-4914-8aa0-3e88c980550e",
+              "testName": "Prueba 2",
+              "segmentLabel": "Tortugas → PC D",
+              "timeMs": null,
+              "timeFormatted": "—"
+            }
+          ]
+        },
+        {
+          "position": 6,
+          "number": "45",
+          "name": "",
+          "category": "",
+          "league": "",
+          "totalTimeMs": 59786,
+          "totalTimeFormatted": "00:59.786",
+          "testsCount": 2,
+          "byTest": [
+            {
+              "testId": "4e94c8fd-ba44-43ae-96c9-39372a92570a",
+              "testName": "Prueba 1",
+              "segmentLabel": "Tortugas → Curva motor",
+              "timeMs": 29893,
+              "timeFormatted": "00:29.893"
+            },
+            {
+              "testId": "4ba5b3ff-6239-4914-8aa0-3e88c980550e",
+              "testName": "Prueba 2",
+              "segmentLabel": "Tortugas → PC D",
+              "timeMs": 29893,
+              "timeFormatted": "00:29.893"
+            }
+          ]
+        },
+        {
+          "position": 7,
+          "number": "43",
+          "name": "",
+          "category": "",
+          "league": "",
+          "totalTimeMs": 61472,
+          "totalTimeFormatted": "01:01.472",
+          "testsCount": 2,
+          "byTest": [
+            {
+              "testId": "4e94c8fd-ba44-43ae-96c9-39372a92570a",
+              "testName": "Prueba 1",
+              "segmentLabel": "Tortugas → Curva motor",
+              "timeMs": 30736,
+              "timeFormatted": "00:30.736"
+            },
+            {
+              "testId": "4ba5b3ff-6239-4914-8aa0-3e88c980550e",
+              "testName": "Prueba 2",
+              "segmentLabel": "Tortugas → PC D",
+              "timeMs": 30736,
+              "timeFormatted": "00:30.736"
+            }
+          ]
+        },
+        {
+          "position": 8,
+          "number": "44",
+          "name": "",
+          "category": "",
+          "league": "",
+          "totalTimeMs": 64104,
+          "totalTimeFormatted": "01:04.104",
+          "testsCount": 2,
+          "byTest": [
+            {
+              "testId": "4e94c8fd-ba44-43ae-96c9-39372a92570a",
+              "testName": "Prueba 1",
+              "segmentLabel": "Tortugas → Curva motor",
+              "timeMs": 32052,
+              "timeFormatted": "00:32.052"
+            },
+            {
+              "testId": "4ba5b3ff-6239-4914-8aa0-3e88c980550e",
+              "testName": "Prueba 2",
+              "segmentLabel": "Tortugas → PC D",
+              "timeMs": 32052,
+              "timeFormatted": "00:32.052"
+            }
+          ]
+        },
+        {
+          "position": 9,
+          "number": "42",
+          "name": "",
+          "category": "",
+          "league": "",
+          "totalTimeMs": 66340,
+          "totalTimeFormatted": "01:06.340",
+          "testsCount": 2,
+          "byTest": [
+            {
+              "testId": "4e94c8fd-ba44-43ae-96c9-39372a92570a",
+              "testName": "Prueba 1",
+              "segmentLabel": "Tortugas → Curva motor",
+              "timeMs": 33170,
+              "timeFormatted": "00:33.170"
+            },
+            {
+              "testId": "4ba5b3ff-6239-4914-8aa0-3e88c980550e",
+              "testName": "Prueba 2",
+              "segmentLabel": "Tortugas → PC D",
+              "timeMs": 33170,
+              "timeFormatted": "00:33.170"
+            }
+          ]
+        },
+        {
+          "position": 10,
+          "number": "46",
+          "name": "",
+          "category": "",
+          "league": "",
+          "totalTimeMs": 103716,
+          "totalTimeFormatted": "01:43.716",
+          "testsCount": 2,
+          "byTest": [
+            {
+              "testId": "4e94c8fd-ba44-43ae-96c9-39372a92570a",
+              "testName": "Prueba 1",
+              "segmentLabel": "Tortugas → Curva motor",
+              "timeMs": 29358,
+              "timeFormatted": "00:29.358"
+            },
+            {
+              "testId": "4ba5b3ff-6239-4914-8aa0-3e88c980550e",
+              "testName": "Prueba 2",
+              "segmentLabel": "Tortugas → PC D",
+              "timeMs": 74358,
+              "timeFormatted": "01:14.358"
+            }
+          ]
+        }
+      ],
+      "warning": null,
+      "createdAt": "2026-07-22T08:06:15.827Z"
+    },
+    {
+      "id": "8492e9c4-20f3-4b2d-8fd9-68fe0607163d",
+      "name": "Clasificación del día sábado",
+      "testIds": [
+        "4e94c8fd-ba44-43ae-96c9-39372a92570a",
+        "4ba5b3ff-6239-4914-8aa0-3e88c980550e"
+      ],
+      "tests": [
+        {
+          "id": "4e94c8fd-ba44-43ae-96c9-39372a92570a",
+          "name": "Prueba 1",
+          "segmentLabel": "Tortugas → Curva motor"
+        },
+        {
+          "id": "4ba5b3ff-6239-4914-8aa0-3e88c980550e",
+          "name": "Prueba 2",
+          "segmentLabel": "Tortugas → PC D"
+        }
+      ],
+      "rows": [
+        {
+          "position": 1,
+          "number": "94",
+          "name": "",
+          "category": "",
+          "league": "",
+          "totalTimeMs": 31360,
+          "totalTimeFormatted": "00:31.360",
+          "testsCount": 1,
+          "byTest": [
+            {
+              "testId": "4e94c8fd-ba44-43ae-96c9-39372a92570a",
+              "testName": "Prueba 1",
+              "segmentLabel": "Tortugas → Curva motor",
+              "timeMs": 31360,
+              "timeFormatted": "00:31.360"
+            },
+            {
+              "testId": "4ba5b3ff-6239-4914-8aa0-3e88c980550e",
+              "testName": "Prueba 2",
+              "segmentLabel": "Tortugas → PC D",
+              "timeMs": null,
+              "timeFormatted": "—"
+            }
+          ]
+        },
+        {
+          "position": 2,
+          "number": "93",
+          "name": "",
+          "category": "",
+          "league": "",
+          "totalTimeMs": 32234,
+          "totalTimeFormatted": "00:32.234",
+          "testsCount": 1,
+          "byTest": [
+            {
+              "testId": "4e94c8fd-ba44-43ae-96c9-39372a92570a",
+              "testName": "Prueba 1",
+              "segmentLabel": "Tortugas → Curva motor",
+              "timeMs": 32234,
+              "timeFormatted": "00:32.234"
+            },
+            {
+              "testId": "4ba5b3ff-6239-4914-8aa0-3e88c980550e",
+              "testName": "Prueba 2",
+              "segmentLabel": "Tortugas → PC D",
+              "timeMs": null,
+              "timeFormatted": "—"
+            }
+          ]
+        },
+        {
+          "position": 3,
+          "number": "92",
+          "name": "",
+          "category": "",
+          "league": "",
+          "totalTimeMs": 34236,
+          "totalTimeFormatted": "00:34.236",
+          "testsCount": 1,
+          "byTest": [
+            {
+              "testId": "4e94c8fd-ba44-43ae-96c9-39372a92570a",
+              "testName": "Prueba 1",
+              "segmentLabel": "Tortugas → Curva motor",
+              "timeMs": 34236,
+              "timeFormatted": "00:34.236"
+            },
+            {
+              "testId": "4ba5b3ff-6239-4914-8aa0-3e88c980550e",
+              "testName": "Prueba 2",
+              "segmentLabel": "Tortugas → PC D",
+              "timeMs": null,
+              "timeFormatted": "—"
+            }
+          ]
+        },
+        {
+          "position": 4,
+          "number": "91",
+          "name": "",
+          "category": "",
+          "league": "",
+          "totalTimeMs": 36759,
+          "totalTimeFormatted": "00:36.759",
+          "testsCount": 1,
+          "byTest": [
+            {
+              "testId": "4e94c8fd-ba44-43ae-96c9-39372a92570a",
+              "testName": "Prueba 1",
+              "segmentLabel": "Tortugas → Curva motor",
+              "timeMs": 36759,
+              "timeFormatted": "00:36.759"
+            },
+            {
+              "testId": "4ba5b3ff-6239-4914-8aa0-3e88c980550e",
+              "testName": "Prueba 2",
+              "segmentLabel": "Tortugas → PC D",
+              "timeMs": null,
+              "timeFormatted": "—"
+            }
+          ]
+        },
+        {
+          "position": 5,
+          "number": "95",
+          "name": "Pepi",
+          "category": "150 cc",
+          "league": "Cundi",
+          "totalTimeMs": 44101,
+          "totalTimeFormatted": "00:44.101",
+          "testsCount": 1,
+          "byTest": [
+            {
+              "testId": "4e94c8fd-ba44-43ae-96c9-39372a92570a",
+              "testName": "Prueba 1",
+              "segmentLabel": "Tortugas → Curva motor",
+              "timeMs": 44101,
+              "timeFormatted": "00:44.101"
+            },
+            {
+              "testId": "4ba5b3ff-6239-4914-8aa0-3e88c980550e",
+              "testName": "Prueba 2",
+              "segmentLabel": "Tortugas → PC D",
+              "timeMs": null,
+              "timeFormatted": "—"
+            }
+          ]
+        },
+        {
+          "position": 6,
+          "number": "45",
+          "name": "",
+          "category": "",
+          "league": "",
+          "totalTimeMs": 59786,
+          "totalTimeFormatted": "00:59.786",
+          "testsCount": 2,
+          "byTest": [
+            {
+              "testId": "4e94c8fd-ba44-43ae-96c9-39372a92570a",
+              "testName": "Prueba 1",
+              "segmentLabel": "Tortugas → Curva motor",
+              "timeMs": 29893,
+              "timeFormatted": "00:29.893"
+            },
+            {
+              "testId": "4ba5b3ff-6239-4914-8aa0-3e88c980550e",
+              "testName": "Prueba 2",
+              "segmentLabel": "Tortugas → PC D",
+              "timeMs": 29893,
+              "timeFormatted": "00:29.893"
+            }
+          ]
+        },
+        {
+          "position": 7,
+          "number": "43",
+          "name": "",
+          "category": "",
+          "league": "",
+          "totalTimeMs": 61472,
+          "totalTimeFormatted": "01:01.472",
+          "testsCount": 2,
+          "byTest": [
+            {
+              "testId": "4e94c8fd-ba44-43ae-96c9-39372a92570a",
+              "testName": "Prueba 1",
+              "segmentLabel": "Tortugas → Curva motor",
+              "timeMs": 30736,
+              "timeFormatted": "00:30.736"
+            },
+            {
+              "testId": "4ba5b3ff-6239-4914-8aa0-3e88c980550e",
+              "testName": "Prueba 2",
+              "segmentLabel": "Tortugas → PC D",
+              "timeMs": 30736,
+              "timeFormatted": "00:30.736"
+            }
+          ]
+        },
+        {
+          "position": 8,
+          "number": "44",
+          "name": "",
+          "category": "",
+          "league": "",
+          "totalTimeMs": 64104,
+          "totalTimeFormatted": "01:04.104",
+          "testsCount": 2,
+          "byTest": [
+            {
+              "testId": "4e94c8fd-ba44-43ae-96c9-39372a92570a",
+              "testName": "Prueba 1",
+              "segmentLabel": "Tortugas → Curva motor",
+              "timeMs": 32052,
+              "timeFormatted": "00:32.052"
+            },
+            {
+              "testId": "4ba5b3ff-6239-4914-8aa0-3e88c980550e",
+              "testName": "Prueba 2",
+              "segmentLabel": "Tortugas → PC D",
+              "timeMs": 32052,
+              "timeFormatted": "00:32.052"
+            }
+          ]
+        },
+        {
+          "position": 9,
+          "number": "42",
+          "name": "",
+          "category": "",
+          "league": "",
+          "totalTimeMs": 66340,
+          "totalTimeFormatted": "01:06.340",
+          "testsCount": 2,
+          "byTest": [
+            {
+              "testId": "4e94c8fd-ba44-43ae-96c9-39372a92570a",
+              "testName": "Prueba 1",
+              "segmentLabel": "Tortugas → Curva motor",
+              "timeMs": 33170,
+              "timeFormatted": "00:33.170"
+            },
+            {
+              "testId": "4ba5b3ff-6239-4914-8aa0-3e88c980550e",
+              "testName": "Prueba 2",
+              "segmentLabel": "Tortugas → PC D",
+              "timeMs": 33170,
+              "timeFormatted": "00:33.170"
+            }
+          ]
+        },
+        {
+          "position": 10,
+          "number": "46",
+          "name": "",
+          "category": "",
+          "league": "",
+          "totalTimeMs": 103716,
+          "totalTimeFormatted": "01:43.716",
+          "testsCount": 2,
+          "byTest": [
+            {
+              "testId": "4e94c8fd-ba44-43ae-96c9-39372a92570a",
+              "testName": "Prueba 1",
+              "segmentLabel": "Tortugas → Curva motor",
+              "timeMs": 29358,
+              "timeFormatted": "00:29.358"
+            },
+            {
+              "testId": "4ba5b3ff-6239-4914-8aa0-3e88c980550e",
+              "testName": "Prueba 2",
+              "segmentLabel": "Tortugas → PC D",
+              "timeMs": 74358,
+              "timeFormatted": "01:14.358"
+            }
+          ]
+        }
+      ],
+      "warning": null,
+      "createdAt": "2026-07-22T08:07:07.736Z"
     }
   ]
 }

@@ -1,4 +1,4 @@
-import type { Event, Pilot, ResultRow } from "./types";
+import type { Event, FusionRow, Pilot, ResultRow, SavedFusion } from "./types";
 
 const BASE = "/api";
 
@@ -50,7 +50,13 @@ export const api = {
   updateTest: (
     eventId: string,
     testId: string,
-    data: { name?: string; description?: string; showDescriptionInPdf?: boolean }
+    data: {
+      name?: string;
+      description?: string;
+      showDescriptionInPdf?: boolean;
+      fromPointId?: string | null;
+      toPointId?: string | null;
+    }
   ) =>
     request(`/events/${eventId}/tests/${testId}`, {
       method: "PUT",
@@ -125,6 +131,43 @@ export const api = {
       scope: string;
       eventName: string;
     }>(`/events/${eventId}/tests/${testId}/results?${q}`);
+  },
+
+  getFusion: (eventId: string, testIds: string[]) => {
+    const q = new URLSearchParams();
+    q.set("tests", testIds.join(","));
+    return request<{
+      title: string;
+      tests: { id: string; name: string; segmentLabel: string }[];
+      rows: FusionRow[];
+      warning?: string | null;
+      eventName: string;
+    }>(`/events/${eventId}/fusion?${q}`);
+  },
+
+  saveFusion: (eventId: string, name: string, testIds: string[]) =>
+    request<SavedFusion>(`/events/${eventId}/fusions`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name, testIds }),
+    }),
+
+  deleteFusion: (eventId: string, fusionId: string) =>
+    request<{ ok: boolean }>(`/events/${eventId}/fusions/${fusionId}`, { method: "DELETE" }),
+
+  fusionExportUrl: (eventId: string, fusionId: string, format: string) =>
+    `${BASE}/events/${eventId}/fusions/${fusionId}/export/${format}`,
+
+  fusionLiveExportUrl: (
+    eventId: string,
+    format: string,
+    testIds: string[],
+    name?: string
+  ) => {
+    const q = new URLSearchParams();
+    q.set("tests", testIds.join(","));
+    if (name) q.set("name", name);
+    return `${BASE}/events/${eventId}/fusion/export/${format}?${q}`;
   },
 
   savePenalty: (

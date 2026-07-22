@@ -92,8 +92,48 @@ export interface Test {
   /** Include description in PDF export */
   showDescriptionInPdf: boolean;
   order: number;
+  /** Timing segment for unified results / fusion (point ids) */
+  fromPointId?: string | null;
+  toPointId?: string | null;
   parts: TestPart[];
   penalties: PilotPenalty[];
+}
+
+export interface FusionTestMeta {
+  id: string;
+  name: string;
+  segmentLabel: string;
+}
+
+export interface FusionTestTime {
+  testId: string;
+  testName: string;
+  segmentLabel: string;
+  timeMs: number | null;
+  timeFormatted: string;
+  laps?: number;
+}
+
+export interface FusionRow {
+  position: number;
+  number: string;
+  name: string;
+  category: string;
+  league: string;
+  totalTimeMs: number;
+  totalTimeFormatted: string;
+  testsCount: number;
+  byTest: FusionTestTime[];
+}
+
+export interface SavedFusion {
+  id: string;
+  name: string;
+  testIds: string[];
+  tests: FusionTestMeta[];
+  rows: FusionRow[];
+  warning?: string | null;
+  createdAt: string;
 }
 
 export interface Event {
@@ -107,6 +147,7 @@ export interface Event {
   /** Pilots registered for this event only */
   pilots: Pilot[];
   tests: Test[];
+  fusions?: SavedFusion[];
   createdAt: string;
   updatedAt: string;
 }

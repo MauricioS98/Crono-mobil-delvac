@@ -3,6 +3,7 @@ import { Link, useParams } from "react-router-dom";
 import { api, formatOffsetInput, formatPenaltyInput, parseOffsetToMs } from "../api";
 import type { Event, ResultRow, Test, TestPart, TimingPoint } from "../types";
 import { EventPilotsSection } from "./EventPilotsSection";
+import { EventFusionPanel } from "./EventFusionPanel";
 
 function msFromOffset(raw: string): number {
   let s = raw.trim().replace(",", ".");
@@ -45,8 +46,6 @@ export function EventDetailPage() {
       }
     >
   >({});
-  const [fromId, setFromId] = useState("");
-  const [toId, setToId] = useState("");
   const [offsetDrafts, setOffsetDrafts] = useState<Record<string, string>>({});
   const [penaltyDrafts, setPenaltyDrafts] = useState<
     Record<string, { timePenalty: string; positionPenalty: string; comment: string }>
@@ -60,9 +59,6 @@ export function EventDetailPage() {
     setOffsetDrafts(
       Object.fromEntries(ev.timingPoints.map((p) => [p.id, formatOffsetInput(p.offsetMs)]))
     );
-    const sorted = [...ev.timingPoints].sort((a, b) => a.order - b.order);
-    if (!fromId && sorted[0]) setFromId(sorted[0].id);
-    if (!toId && sorted[1]) setToId(sorted[1].id);
     setPartByTest((prev) => {
       const next = { ...prev };
       for (const t of ev.tests) {
@@ -82,12 +78,17 @@ export function EventDetailPage() {
 
   const refreshResults = async (testId: string, partId?: string | null) => {
     if (!event) return;
+    const test = event.tests.find((t) => t.id === testId);
+    if (!test) return;
+    const pts = [...event.timingPoints].sort((a, b) => a.order - b.order);
+    const from = test.fromPointId || pts[0]?.id || "";
+    const to = test.toPointId || pts[1]?.id || "";
     const pid = partId || undefined;
     setError("");
     try {
       const data = await api.getResults(event.id, testId, {
-        from: fromId,
-        to: toId,
+        from,
+        to,
         partId: pid,
       });
       setResultsByTest((prev) => ({
@@ -714,10 +715,23 @@ export function EventDetailPage() {
                           <h4>Resultados</h4>
                         </header>
 
+                        <p className="muted" style={{ fontSize: "0.78rem", margin: "0 0 0.5rem" }}>
+                          Segmento guardado por prueba (Desde/Hasta). La fusión usa esta configuración
+                          de cada prueba por separado.
+                        </p>
+
                         <div className="results-controls">
                           <div className="field">
                             <label>Desde</label>
-                            <select value={fromId} onChange={(e) => setFromId(e.target.value)}>
+                            <select
+                              value={test.fromPointId || points[0]?.id || ""}
+                              onChange={async (e) => {
+                                await api.updateTest(event.id, test.id, {
+                                  fromPointId: e.target.value,
+                                });
+                                load();
+                              }}
+                            >
                               {points.map((p) => (
                                 <option key={p.id} value={p.id}>
                                   {p.name}
@@ -727,7 +741,15 @@ export function EventDetailPage() {
                           </div>
                           <div className="field">
                             <label>Hasta</label>
-                            <select value={toId} onChange={(e) => setToId(e.target.value)}>
+                            <select
+                              value={test.toPointId || points[1]?.id || ""}
+                              onChange={async (e) => {
+                                await api.updateTest(event.id, test.id, {
+                                  toPointId: e.target.value,
+                                });
+                                load();
+                              }}
+                            >
                               {points.map((p) => (
                                 <option key={p.id} value={p.id}>
                                   {p.name}
@@ -769,8 +791,8 @@ export function EventDetailPage() {
                                   key={fmt}
                                   className="btn btn-ghost btn-sm"
                                   href={api.exportUrl(event.id, test.id, fmt, {
-                                    from: fromId,
-                                    to: toId,
+                                    from: test.fromPointId || points[0]?.id,
+                                    to: test.toPointId || points[1]?.id,
                                     partId: testResults.partId,
                                   })}
                                 >
@@ -987,6 +1009,14 @@ export function EventDetailPage() {
           </div>
         )}
       </div>
+
+      <EventFusionPanel
+        eventId={event.id}
+        tests={event.tests}
+        points={points}
+        fusions={event.fusions || []}
+        onReload={load}
+      />
     </div>
   );
 }
