@@ -297,7 +297,8 @@
                 ]
               }
             }
-          ]
+          ],
+          "expectedLaps": null
         },
         {
           "id": "a22ada63-997f-425e-8c49-06ae035ab4aa",
@@ -559,210 +560,241 @@
                 ]
               }
             }
-          ]
+          ],
+          "expectedLaps": null
         },
         {
           "id": "9e3c301d-2ac8-4011-850c-66cb69a2c41b",
           "name": "Salida 4",
           "order": 3,
           "combinedMode": false,
-          "csvs": []
+          "csvs": [],
+          "expectedLaps": null
         },
         {
           "id": "212137fe-0a1b-4ad0-abba-6807da245050",
           "name": "Salida 5",
           "order": 4,
           "combinedMode": false,
-          "csvs": []
+          "csvs": [],
+          "expectedLaps": null
         },
         {
           "id": "8aa07c3c-359b-45d1-a525-9c1d99a0afb0",
           "name": "Salida 6",
           "order": 5,
           "combinedMode": false,
-          "csvs": []
+          "csvs": [],
+          "expectedLaps": null
         },
         {
           "id": "7ee7cca0-97ff-4baf-8ec2-0a1f31056525",
           "name": "Salida 7",
           "order": 6,
           "combinedMode": false,
-          "csvs": []
+          "csvs": [],
+          "expectedLaps": null
         },
         {
           "id": "a4abca45-cab3-4a27-8135-f0cc129d22f0",
           "name": "Salida 8",
           "order": 7,
           "combinedMode": false,
-          "csvs": []
+          "csvs": [],
+          "expectedLaps": null
         },
         {
           "id": "60dfd94d-355b-4c2d-be97-37ee95924999",
           "name": "Salida 9",
           "order": 8,
           "combinedMode": false,
-          "csvs": []
+          "csvs": [],
+          "expectedLaps": null
         },
         {
           "id": "934f39c9-a0e4-4897-8e8d-c4281c182fd3",
           "name": "Salida 10",
           "order": 9,
           "combinedMode": false,
-          "csvs": []
+          "csvs": [],
+          "expectedLaps": null
         },
         {
           "id": "cc4523fd-67db-4af6-b43d-d2dd68a99ba5",
           "name": "Salida 11",
           "order": 10,
           "combinedMode": false,
-          "csvs": []
+          "csvs": [],
+          "expectedLaps": null
         },
         {
           "id": "fd15af92-0344-4696-913b-9a28814ea31c",
           "name": "Salida 12",
           "order": 11,
           "combinedMode": false,
-          "csvs": []
+          "csvs": [],
+          "expectedLaps": null
         },
         {
           "id": "865287c2-8f5a-4d6e-99ac-8c2fab5a2d75",
           "name": "Salida 13",
           "order": 12,
           "combinedMode": false,
-          "csvs": []
+          "csvs": [],
+          "expectedLaps": null
         },
         {
           "id": "e10da436-615a-4035-9f9a-cccb997f5cec",
           "name": "Salida 14",
           "order": 13,
           "combinedMode": false,
-          "csvs": []
+          "csvs": [],
+          "expectedLaps": null
         },
         {
           "id": "cd6ea05d-3cbe-4c0a-8267-0742bf42211d",
           "name": "Salida 15",
           "order": 14,
           "combinedMode": false,
-          "csvs": []
+          "csvs": [],
+          "expectedLaps": null
         },
         {
           "id": "c9a608fe-329d-4246-8fa0-afc7ee44d28b",
           "name": "Salida 16",
           "order": 15,
           "combinedMode": false,
-          "csvs": []
+          "csvs": [],
+          "expectedLaps": null
         },
         {
           "id": "ceb06692-e96f-4341-8552-9d7b69f5c3be",
           "name": "Salida 17",
           "order": 16,
           "combinedMode": false,
-          "csvs": []
+          "csvs": [],
+          "expectedLaps": null
         },
         {
           "id": "aad4016c-5536-4a08-a1b4-a92676733624",
           "name": "Salida 18",
           "order": 17,
           "combinedMode": false,
-          "csvs": []
+          "csvs": [],
+          "expectedLaps": null
         },
         {
           "id": "9bfc112b-bbd6-4f67-a2aa-d9d6f7100f63",
           "name": "Salida 19",
           "order": 18,
           "combinedMode": false,
-          "csvs": []
+          "csvs": [],
+          "expectedLaps": null
         },
         {
           "id": "e02018a2-add6-417b-8982-f015ec4644a5",
           "name": "Salida 19",
           "order": 19,
           "combinedMode": false,
-          "csvs": []
+          "csvs": [],
+          "expectedLaps": null
         },
         {
           "id": "09983602-d0b2-4c0b-9a41-1a24a3be7c0d",
           "name": "Salida 21",
           "order": 20,
           "combinedMode": false,
-          "csvs": []
+          "csvs": [],
+          "expectedLaps": null
         },
         {
           "id": "a686589c-646f-45c7-b778-3a3c2149bb3a",
           "name": "Salida 22",
           "order": 21,
           "combinedMode": false,
-          "csvs": []
+          "csvs": [],
+          "expectedLaps": null
         },
         {
           "id": "e141d894-62db-4cfb-a1ed-4eac32872eaa",
           "name": "Salida 23",
           "order": 22,
           "combinedMode": false,
-          "csvs": []
+          "csvs": [],
+          "expectedLaps": null
         },
         {
           "id": "68e95f97-3fba-4d17-a7dc-eb224674cc01",
           "name": "Salida 24",
           "order": 23,
           "combinedMode": false,
-          "csvs": []
+          "csvs": [],
+          "expectedLaps": null
         },
         {
           "id": "54f395ed-dd0e-4e5f-98e0-76d70b3c239b",
           "name": "Salida 25",
           "order": 24,
           "combinedMode": true,
-          "csvs": []
+          "csvs": [],
+          "combinedScoring": "laps",
+          "expectedLaps": 2
         },
         {
           "id": "72882fb6-38db-467c-a8c4-c1bcaf337566",
           "name": "Salida 26",
           "order": 25,
           "combinedMode": false,
-          "csvs": []
+          "csvs": [],
+          "expectedLaps": null
         },
         {
           "id": "f2577bd8-efd5-4309-9c34-f0f20e0abb74",
           "name": "Salida 27",
           "order": 26,
           "combinedMode": false,
-          "csvs": []
+          "csvs": [],
+          "expectedLaps": null
         },
         {
           "id": "b848abd6-986e-4f76-88f0-8f5fe89cd6e7",
           "name": "Salida 28",
           "order": 27,
           "combinedMode": false,
-          "csvs": []
+          "csvs": [],
+          "expectedLaps": null
         },
         {
           "id": "61a5be04-4ee7-4d1a-8996-0f8d1762182e",
           "name": "Salida 29",
           "order": 28,
           "combinedMode": false,
-          "csvs": []
+          "csvs": [],
+          "expectedLaps": null
         },
         {
           "id": "dcf0ec43-ad76-4535-afaf-5fc5efa1ab1e",
           "name": "Salida 30",
           "order": 29,
           "combinedMode": false,
-          "csvs": []
+          "csvs": [],
+          "expectedLaps": null
         },
         {
           "id": "9004dc77-453c-416a-abd3-adbdaf0c793a",
           "name": "Salida 31",
           "order": 30,
           "combinedMode": false,
-          "csvs": []
+          "csvs": [],
+          "expectedLaps": null
         },
         {
           "id": "ad71daa9-4dbc-421d-b39e-794f71ed9e28",
           "name": "Salida 32",
           "order": 31,
           "combinedMode": false,
-          "csvs": []
+          "csvs": [],
+          "expectedLaps": null
         }
       ],
       "description": "vfdfbfdfg",
@@ -771,7 +803,7 @@
     }
   ],
   "createdAt": "2026-07-21T23:15:14.087Z",
-  "updatedAt": "2026-07-22T06:45:19.297Z",
+  "updatedAt": "2026-07-22T07:35:17.452Z",
   "pilots": [
     {
       "id": "a7f13157-9a69-4c92-a2a3-29d59c386e53",

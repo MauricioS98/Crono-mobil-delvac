@@ -22,8 +22,12 @@ export interface Passage {
   tmPasosRaw: string;
   lapTimeMs: number | null;
   lapTimeRaw: string;
+  lapsCount?: number | null;
+  elapsedMs?: number | null;
   clase: string;
 }
+
+export type CombinedScoring = "time" | "laps";
 
 export interface FlagEvent {
   type: string;
@@ -50,6 +54,8 @@ export interface TestPart {
   name: string;
   order: number;
   combinedMode: boolean;
+  combinedScoring?: CombinedScoring;
+  expectedLaps?: number | null;
   csvs: PartCsvSlot[];
 }
 
@@ -107,4 +113,7 @@ export interface ResultRow {
   incomplete?: boolean;
   incompleteReason?: "missing_start" | "missing_finish";
   statusLabel?: string;
+  laps?: number;
+  expectedLaps?: number | null;
+  lapsIncomplete?: boolean;
 }

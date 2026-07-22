@@ -22,9 +22,15 @@ export interface Passage {
   tmPasosRaw: string;
   lapTimeMs: number | null;
   lapTimeRaw: string;
+  /** Lap counter from Vueltas column */
+  lapsCount: number | null;
+  /** Elapsed race time from T° Transcurrido column */
+  elapsedMs: number | null;
   clase: string;
   rowIndex: number;
 }
+
+export type CombinedScoring = "time" | "laps";
 
 export type FlagType =
   | "warmup"
@@ -62,6 +68,10 @@ export interface TestPart {
   order: number;
   /** When true, a single CSV already contains both times via Tiempo de vuelta */
   combinedMode: boolean;
+  /** How to rank combined CSV results (default: time) */
+  combinedScoring?: CombinedScoring;
+  /** Expected laps when combinedScoring is laps; null = indeterminate */
+  expectedLaps?: number | null;
   csvs: PartCsvSlot[];
 }
 
@@ -126,4 +136,10 @@ export interface ResultRow {
   incompleteReason?: "missing_start" | "missing_finish";
   /** Human-readable status for incomplete rows */
   statusLabel?: string;
+  /** Completed laps (combined lap mode) */
+  laps?: number;
+  /** Expected laps for this heat (null = indeterminate) */
+  expectedLaps?: number | null;
+  /** True when laps < expected in lap mode */
+  lapsIncomplete?: boolean;
 }

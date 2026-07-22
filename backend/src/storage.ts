@@ -42,6 +42,11 @@ export function getEvent(id: string): Event | null {
     description: t.description ?? "",
     showDescriptionInPdf: Boolean(t.showDescriptionInPdf),
     penalties: t.penalties || [],
+    parts: (t.parts || []).map((p) => ({
+      ...p,
+      combinedScoring: p.combinedScoring ?? (p.combinedMode ? "time" : undefined),
+      expectedLaps: p.expectedLaps ?? null,
+    })),
   }));
   return event;
 }

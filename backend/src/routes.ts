@@ -179,6 +179,13 @@ router.post("/events/:id/tests/:testId/parts", (req, res) => {
     name: req.body.name || `Salida ${test.parts.length + 1}`,
     order: test.parts.length,
     combinedMode: Boolean(req.body.combinedMode),
+    combinedScoring: req.body.combinedMode ? req.body.combinedScoring || "time" : undefined,
+    expectedLaps:
+      req.body.combinedMode && req.body.combinedScoring === "laps"
+        ? req.body.expectedLaps === undefined || req.body.expectedLaps === ""
+          ? null
+          : Number(req.body.expectedLaps)
+        : null,
     csvs: [],
   };
   test.parts.push(part);
@@ -195,7 +202,22 @@ router.put("/events/:id/tests/:testId/parts/:partId", (req, res) => {
   if (!part) return res.status(404).json({ error: "Parte no encontrada" });
 
   if (req.body.name != null) part.name = req.body.name;
-  if (req.body.combinedMode != null) part.combinedMode = Boolean(req.body.combinedMode);
+  if (req.body.combinedMode != null) {
+    part.combinedMode = Boolean(req.body.combinedMode);
+    if (!part.combinedMode) {
+      part.combinedScoring = undefined;
+      part.expectedLaps = null;
+    }
+  }
+  if (req.body.combinedScoring != null) {
+    part.combinedScoring = req.body.combinedScoring === "laps" ? "laps" : "time";
+    if (part.combinedScoring !== "laps") part.expectedLaps = null;
+  }
+  if (req.body.expectedLaps !== undefined) {
+    const raw = req.body.expectedLaps;
+    part.expectedLaps =
+      raw === null || raw === "" || raw === "indeterminate" ? null : Number(raw);
+  }
   saveEvent(event);
   res.json(part);
 });

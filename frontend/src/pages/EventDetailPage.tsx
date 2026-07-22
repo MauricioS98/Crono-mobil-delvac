@@ -397,6 +397,8 @@ export function EventDetailPage() {
               const selectedPartId = partByTest[test.id] ?? test.parts[0]?.id ?? null;
               const selectedPart = test.parts.find((p) => p.id === selectedPartId);
               const testResults = resultsByTest[test.id];
+              const showLapsCol =
+                testResults?.rows.some((r) => r.laps != null && r.laps > 0) ?? false;
 
               return (
                 <div key={test.id} className={`accordion-item ${open ? "open" : ""}`}>
@@ -501,7 +503,11 @@ export function EventDetailPage() {
                           <h4>Salidas / CSV</h4>
                           {selectedPart && (
                             <span className="chip">
-                              {selectedPart.combinedMode ? "CSV combinado" : "CSV por punto"}
+                              {selectedPart.combinedMode
+                                ? selectedPart.combinedScoring === "laps"
+                                  ? "CSV único · vueltas"
+                                  : "CSV único · tiempo"
+                                : "CSV por punto"}
                             </span>
                           )}
                         </header>
@@ -521,7 +527,11 @@ export function EventDetailPage() {
                                   }
                                 >
                                   {p.name}
-                                  {p.combinedMode ? " · comb." : ""}
+                                  {p.combinedMode
+                                    ? p.combinedScoring === "laps"
+                                      ? " · vueltas"
+                                      : " · tiempo"
+                                    : ""}
                                 </button>
                               ))}
                             </div>
@@ -532,13 +542,23 @@ export function EventDetailPage() {
                                   <button
                                     className="btn btn-ghost btn-sm"
                                     onClick={async () => {
-                                      await api.updatePart(event.id, test.id, selectedPart.id, {
-                                        combinedMode: !selectedPart.combinedMode,
-                                      });
+                                      if (selectedPart.combinedMode) {
+                                        await api.updatePart(event.id, test.id, selectedPart.id, {
+                                          combinedMode: false,
+                                        });
+                                      } else {
+                                        await api.updatePart(event.id, test.id, selectedPart.id, {
+                                          combinedMode: true,
+                                          combinedScoring: "time",
+                                          expectedLaps: null,
+                                        });
+                                      }
                                       load();
                                     }}
                                   >
-                                    Cambiar modo
+                                    {selectedPart.combinedMode
+                                      ? "Cambiar a CSV por punto"
+                                      : "Cambiar a CSV único"}
                                   </button>
                                   <button
                                     className="btn btn-danger btn-sm"
@@ -553,10 +573,95 @@ export function EventDetailPage() {
                                   </button>
                                 </div>
 
+                                {selectedPart.combinedMode && (
+                                  <div className="combined-settings">
+                                    <p className="combined-settings-title">Puntuación CSV único</p>
+                                    <div className="combined-settings-row">
+                                      <label className="combined-option">
+                                        <input
+                                          type="radio"
+                                          name={`scoring-${selectedPart.id}`}
+                                          checked={selectedPart.combinedScoring !== "laps"}
+                                          onChange={async () => {
+                                            await api.updatePart(event.id, test.id, selectedPart.id, {
+                                              combinedScoring: "time",
+                                              expectedLaps: null,
+                                            });
+                                            load();
+                                          }}
+                                        />
+                                        Por tiempo
+                                      </label>
+                                      <label className="combined-option">
+                                        <input
+                                          type="radio"
+                                          name={`scoring-${selectedPart.id}`}
+                                          checked={selectedPart.combinedScoring === "laps"}
+                                          onChange={async () => {
+                                            await api.updatePart(event.id, test.id, selectedPart.id, {
+                                              combinedScoring: "laps",
+                                              expectedLaps: selectedPart.expectedLaps ?? null,
+                                            });
+                                            load();
+                                          }}
+                                        />
+                                        Por vueltas
+                                      </label>
+                                    </div>
+                                    {selectedPart.combinedScoring === "laps" && (
+                                      <div className="combined-laps-config">
+                                        <label className="combined-option">
+                                          <input
+                                            type="checkbox"
+                                            checked={selectedPart.expectedLaps == null}
+                                            onChange={async (e) => {
+                                              await api.updatePart(event.id, test.id, selectedPart.id, {
+                                                expectedLaps: e.target.checked ? null : 10,
+                                              });
+                                              load();
+                                            }}
+                                          />
+                                          Vueltas indeterminadas
+                                        </label>
+                                        {selectedPart.expectedLaps != null && (
+                                          <div className="field field-inline">
+                                            <label>Vueltas esperadas</label>
+                                            <input
+                                              type="number"
+                                              min={1}
+                                              step={1}
+                                              value={selectedPart.expectedLaps}
+                                              onChange={async (e) => {
+                                                const n = Number(e.target.value);
+                                                if (n > 0) {
+                                                  await api.updatePart(
+                                                    event.id,
+                                                    test.id,
+                                                    selectedPart.id,
+                                                    { expectedLaps: n }
+                                                  );
+                                                  load();
+                                                }
+                                              }}
+                                            />
+                                          </div>
+                                        )}
+                                        <p className="muted" style={{ fontSize: "0.78rem", margin: 0 }}>
+                                          Gana quien complete más vueltas en menor tiempo.
+                                        </p>
+                                      </div>
+                                    )}
+                                  </div>
+                                )}
+
                                 {selectedPart.combinedMode ? (
                                   <CsvDrop
                                     label="CSV único"
-                                    hint="Tiempo de vuelta ≠ 0 = tiempo de carrera"
+                                    hint={
+                                      selectedPart.combinedScoring === "laps"
+                                        ? "Usa columnas Vueltas y T° Transcurrido"
+                                        : "Tiempo de vuelta ≠ 0 = tiempo de carrera"
+                                    }
                                     filename={selectedPart.csvs[0]?.filename}
                                     onFile={(f) =>
                                       uploadCsv(
@@ -682,6 +787,7 @@ export function EventDetailPage() {
                                     <th>Nombre</th>
                                     <th>Categoría</th>
                                     <th>Liga</th>
+                                    {showLapsCol && <th>Vueltas</th>}
                                     <th>Tiempo</th>
                                     <th>Salida</th>
                                     <th>Pen. tiempo</th>
@@ -724,6 +830,22 @@ export function EventDetailPage() {
                                         </td>
                                         <td>{r.category || "—"}</td>
                                         <td>{r.league || "—"}</td>
+                                        {showLapsCol && (
+                                          <td>
+                                            {r.laps != null ? (
+                                              <>
+                                                {r.expectedLaps != null
+                                                  ? `${r.laps} / ${r.expectedLaps}`
+                                                  : r.laps}
+                                                {r.lapsIncomplete && (
+                                                  <span className="badge-warn"> · incompleto</span>
+                                                )}
+                                              </>
+                                            ) : (
+                                              "—"
+                                            )}
+                                          </td>
+                                        )}
                                         <td className="time">
                                           {r.incomplete ? (
                                             <span className="badge-incomplete" title={r.statusLabel}>

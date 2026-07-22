@@ -1245,6 +1245,53 @@ tr:hover td {
   background: rgba(180, 100, 40, 0.12);
 }
 
+.combined-settings {
+  padding: 0.75rem 0.9rem;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.02);
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+}
+
+.combined-settings-title {
+  margin: 0;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--accent-hot);
+}
+
+.combined-settings-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+.combined-option {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+
+.combined-laps-config {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.field-inline {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.field-inline input[type="number"] {
+  width: 5rem;
+}
+
 .badge-incomplete {
   display: inline-block;
   font-size: 0.75rem;

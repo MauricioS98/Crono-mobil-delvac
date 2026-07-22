@@ -117,6 +117,14 @@ export function parseTimingCsv(content: string, filename: string): ParsedCsv {
   const colTm = findCol(headers, "tm de pasos", "tm pasos");
   const colLap = findCol(headers, "tiempo de vuelta");
   const colClase = findCol(headers, "clase");
+  const colLaps = findCol(headers, "vueltas");
+  const colElapsed = findCol(
+    headers,
+    "t° transcurrido",
+    "t transcurrido",
+    "tiempo transcurrido",
+    "tempo transcurrido"
+  );
 
   if (colNumero < 0 || colTm < 0) {
     throw new Error('El CSV debe contener las columnas "N°" y "Tm de pasos"');
@@ -131,6 +139,8 @@ export function parseTimingCsv(content: string, filename: string): ParsedCsv {
     const nombre = colNombre >= 0 ? (cols[colNombre] ?? "").trim() : "";
     const tmRaw = (cols[colTm] ?? "").trim();
     const lapRaw = colLap >= 0 ? (cols[colLap] ?? "").trim() : "";
+    const lapsRaw = colLaps >= 0 ? (cols[colLaps] ?? "").trim() : "";
+    const elapsedRaw = colElapsed >= 0 ? (cols[colElapsed] ?? "").trim() : "";
     const clase = colClase >= 0 ? (cols[colClase] ?? "").trim() : "";
     const tmMs = parseTimeToMs(tmRaw);
     if (tmMs === null) continue;
@@ -165,6 +175,8 @@ export function parseTimingCsv(content: string, filename: string): ParsedCsv {
 
     const lapMs = parseTimeToMs(lapRaw);
     const hasLap = lapRaw !== "" && lapRaw !== "0" && lapRaw !== "0.0" && lapRaw !== "0,0" && lapMs !== null && lapMs > 0;
+    const lapsCount = lapsRaw !== "" ? Number(lapsRaw) : null;
+    const elapsedMs = elapsedRaw ? parseTimeToMs(elapsedRaw) : null;
 
     passages.push({
       number: numero,
@@ -173,6 +185,8 @@ export function parseTimingCsv(content: string, filename: string): ParsedCsv {
       tmPasosRaw: tmRaw,
       lapTimeMs: hasLap ? lapMs : null,
       lapTimeRaw: lapRaw,
+      lapsCount: lapsCount != null && !Number.isNaN(lapsCount) ? Math.floor(lapsCount) : null,
+      elapsedMs: elapsedMs ?? null,
       clase,
       rowIndex: i,
     });

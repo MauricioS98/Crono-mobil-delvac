@@ -50,6 +50,99 @@ function firstLapPassageByPilot(
   return map;
 }
 
+interface LapPilotResult {
+  number: string;
+  name: string;
+  laps: number;
+  totalTimeMs: number;
+}
+
+/** Lap count + total elapsed time per pilot from combined CSV */
+function lapResultsByPilot(parsed: ParsedCsv): Map<string, LapPilotResult> {
+  const byPilot = new Map<string, { number: string; name: string; passages: typeof parsed.racePassages }>();
+  for (const p of parsed.racePassages) {
+    const key = normalizeNumber(p.number);
+    if (!byPilot.has(key)) {
+      byPilot.set(key, { number: p.number, name: p.name, passages: [] });
+    }
+    byPilot.get(key)!.passages.push(p);
+  }
+
+  const result = new Map<string, LapPilotResult>();
+  for (const [key, data] of byPilot) {
+    const completed = data.passages.filter((p) => p.lapTimeMs != null && p.lapTimeMs > 0);
+    if (completed.length === 0) continue;
+
+    const lapCounts = completed
+      .map((p) => p.lapsCount)
+      .filter((n): n is number => n != null && n > 0);
+    const laps = lapCounts.length > 0 ? Math.max(...lapCounts) : completed.length;
+
+    const last = completed[completed.length - 1];
+    let totalTimeMs = last.elapsedMs ?? 0;
+    if (totalTimeMs <= 0 && completed.length >= 2) {
+      totalTimeMs = completed[completed.length - 1].tmPasosMs - completed[0].tmPasosMs;
+    }
+    if (totalTimeMs <= 0 && last.lapTimeMs) {
+      totalTimeMs = last.lapTimeMs;
+    }
+
+    result.set(key, {
+      number: data.number,
+      name: data.name,
+      laps,
+      totalTimeMs: Math.max(0, totalTimeMs),
+    });
+  }
+  return result;
+}
+
+function enrichLap(
+  pilots: Pilot[],
+  number: string,
+  name: string,
+  laps: number,
+  totalTimeMs: number,
+  part: TestPart
+): ResultRow {
+  const expected = part.expectedLaps ?? null;
+  const row = enrich(
+    pilots,
+    number,
+    name,
+    totalTimeMs,
+    `Vueltas (${laps}${expected != null ? ` / ${expected}` : ""})`,
+    part
+  );
+  return {
+    ...row,
+    laps,
+    expectedLaps: expected,
+    lapsIncomplete: expected != null && laps < expected,
+  };
+}
+
+function rankLapRaw(rows: ResultRow[]): ResultRow[] {
+  const sorted = [...rows].sort((a, b) => {
+    const lapsA = a.laps ?? 0;
+    const lapsB = b.laps ?? 0;
+    if (lapsB !== lapsA) return lapsB - lapsA;
+    return a.rawTimeMs - b.rawTimeMs;
+  });
+  return sorted.map((r, i) => ({ ...r, position: i + 1 }));
+}
+
+function isLapScoring(part: TestPart): boolean {
+  return part.combinedMode && part.combinedScoring === "laps";
+}
+
+function compareLapResultRows(a: ResultRow, b: ResultRow): number {
+  const lapsA = a.laps ?? 0;
+  const lapsB = b.laps ?? 0;
+  if (lapsB !== lapsA) return lapsB - lapsA;
+  return a.rawTimeMs - b.rawTimeMs;
+}
+
 function correctedTime(rawMs: number, point: TimingPoint | undefined): number {
   return rawMs - (point?.offsetMs ?? 0);
 }
@@ -218,13 +311,30 @@ export function applyPenalties(
     };
   });
 
-  const byTime = [...withTime].sort((a, b) => a.timeMs - b.timeMs);
-  const provisional = byTime.map((r, i) => ({
+  const lapMode = withTime.some((r) => r.laps != null && r.laps > 0);
+
+  const byScore = [...withTime].sort((a, b) => {
+    if (lapMode) {
+      const lapsA = a.laps ?? 0;
+      const lapsB = b.laps ?? 0;
+      if (lapsB !== lapsA) return lapsB - lapsA;
+    }
+    return a.timeMs - b.timeMs;
+  });
+
+  const provisional = byScore.map((r, i) => ({
     ...r,
     _sort: i + 1 + (r.positionPenalty || 0),
   }));
 
-  provisional.sort((a, b) => a._sort - b._sort || a.timeMs - b.timeMs);
+  provisional.sort((a, b) => {
+    if (lapMode) {
+      const lapsA = a.laps ?? 0;
+      const lapsB = b.laps ?? 0;
+      if (lapsB !== lapsA) return lapsB - lapsA;
+    }
+    return a._sort - b._sort || a.timeMs - b.timeMs;
+  });
 
   return provisional.map(({ _sort, ...r }, i) => ({
     ...r,
@@ -316,6 +426,24 @@ export function computePartResults(
   if (part.combinedMode) {
     const slot = part.csvs[0];
     if (!slot) return { rows: [], warning: "No hay CSV cargado en esta parte.", scope };
+
+    if (isLapScoring(part)) {
+      const byPilot = lapResultsByPilot(slot.parsed);
+      const rows: ResultRow[] = [];
+      for (const [, p] of byPilot) {
+        rows.push(enrichLap(pilots, p.number, p.name, p.laps, p.totalTimeMs, part));
+      }
+      if (rows.length === 0) {
+        return {
+          rows: [],
+          warning:
+            "No se encontraron vueltas completadas (Tiempo de vuelta > 0) en el CSV.",
+          scope,
+        };
+      }
+      return { rows: applyPenalties(rankLapRaw(rows), test.penalties, scope), scope };
+    }
+
     const byPilot = firstLapPassageByPilot(slot.parsed);
     const rows: ResultRow[] = [];
     for (const [, p] of byPilot) {
@@ -482,13 +610,27 @@ export function computeTestResults(
       if (row.incomplete) continue;
       const key = normalizeNumber(row.number);
       const prev = best.get(key);
-      if (!prev || row.rawTimeMs < prev.rawTimeMs) {
+      if (!prev) {
+        best.set(key, { ...row, partId: part.id, partName: part.name });
+        continue;
+      }
+      const better =
+        isLapScoring(part) || (prev.laps != null && row.laps != null)
+          ? compareLapResultRows(row, prev) < 0
+          : row.rawTimeMs < prev.rawTimeMs;
+      if (better) {
         best.set(key, { ...row, partId: part.id, partName: part.name });
       }
     }
   }
 
-  const rows = applyPenalties(rankRaw([...best.values()]), test.penalties, scope);
+  const values = [...best.values()];
+  const useLapRank = values.some((r) => r.laps != null && r.laps > 0);
+  const rows = applyPenalties(
+    useLapRank ? rankLapRaw(values) : rankRaw(values),
+    test.penalties,
+    scope
+  );
   if (rows.length === 0) {
     return {
       rows: [],

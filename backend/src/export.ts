@@ -40,33 +40,52 @@ function penaltyCells(r: ResultRow, flags: PenaltyFlags): (string | number)[] {
   return cells;
 }
 
+function hasLapResults(rows: ResultRow[]): boolean {
+  return rows.some((r) => r.laps != null && r.laps > 0);
+}
+
+function lapsCell(r: ResultRow): string {
+  if (r.laps == null) return "";
+  return r.expectedLaps != null ? `${r.laps}/${r.expectedLaps}` : String(r.laps);
+}
+
+function baseHeaders(withLaps: boolean): string[] {
+  const h = ["Pos", "N°", "Nombre", "Categoría", "Liga"];
+  if (withLaps) h.push("Vueltas");
+  h.push("Tiempo", "Salida", "Segmento");
+  return h;
+}
+
+function baseCells(r: ResultRow, withLaps: boolean): (string | number)[] {
+  const cells: (string | number)[] = [
+    r.position,
+    r.number,
+    r.name,
+    r.category || "—",
+    r.league || "—",
+  ];
+  if (withLaps) cells.push(lapsCell(r));
+  cells.push(r.timeFormatted, r.partName || "—", r.segmentLabel);
+  return cells;
+}
+
 export function resultsToCsv(rows: ResultRow[], title: string): string {
   const flags = penaltyFlags(rows);
-  const header = [
-    "Pos",
-    "N°",
-    "Nombre",
-    "Categoría",
-    "Liga",
-    "Tiempo",
-    "Salida",
-    "Segmento",
-    ...penaltyHeaders(flags),
-  ];
+  const withLaps = hasLapResults(rows);
+  const header = [...baseHeaders(withLaps), ...penaltyHeaders(flags)];
   const lines = [
     `# ${title}`,
     header.join(","),
     ...rows.map((r) => {
-      const base = [
+      const base: (string | number)[] = [
         r.position,
         esc(r.number),
         esc(r.name),
         esc(r.category || ""),
         esc(r.league || ""),
-        r.timeFormatted,
-        esc(r.partName || ""),
-        esc(r.segmentLabel),
       ];
+      if (withLaps) base.push(lapsCell(r));
+      base.push(r.timeFormatted, esc(r.partName || ""), esc(r.segmentLabel));
       const pens = penaltyCells(r, flags).map((c) => (typeof c === "string" ? esc(c) : c));
       return [...base, ...pens].join(",");
     }),
@@ -80,12 +99,14 @@ export async function resultsToExcel(
   eventName: string
 ): Promise<Buffer> {
   const flags = penaltyFlags(rows);
+  const withLaps = hasLapResults(rows);
   const penHeaders = penaltyHeaders(flags);
   const wb = new ExcelJS.Workbook();
   wb.creator = "GPMD Cronometraje";
   const ws = wb.addWorksheet("Resultados");
 
-  const colCount = 8 + penHeaders.length;
+  const headers = [...baseHeaders(withLaps), ...penHeaders];
+  const colCount = headers.length;
   ws.mergeCells(1, 1, 1, colCount);
   ws.getCell("A1").value = eventName;
   ws.getCell("A1").font = { bold: true, size: 16, color: { argb: "FF1A1A1A" } };
@@ -94,17 +115,6 @@ export async function resultsToExcel(
   ws.getCell("A2").value = title;
   ws.getCell("A2").font = { size: 12, color: { argb: "FF444444" } };
 
-  const headers = [
-    "Pos",
-    "N°",
-    "Nombre",
-    "Categoría",
-    "Liga",
-    "Tiempo",
-    "Salida",
-    "Segmento",
-    ...penHeaders,
-  ];
   const headerRow = ws.addRow(headers);
   headerRow.eachCell((cell) => {
     cell.font = { bold: true, color: { argb: "FFFFFFFF" } };
@@ -113,17 +123,7 @@ export async function resultsToExcel(
   });
 
   for (const r of rows) {
-    ws.addRow([
-      r.position,
-      r.number,
-      r.name,
-      r.category || "—",
-      r.league || "—",
-      r.timeFormatted,
-      r.partName || "—",
-      r.segmentLabel,
-      ...penaltyCells(r, flags),
-    ]);
+    ws.addRow([...baseCells(r, withLaps), ...penaltyCells(r, flags)]);
   }
 
   const penWidths = [
@@ -137,6 +137,7 @@ export async function resultsToExcel(
     { width: 28 },
     { width: 22 },
     { width: 16 },
+    ...(withLaps ? [{ width: 10 }] : []),
     { width: 14 },
     { width: 14 },
     { width: 18 },
@@ -157,16 +158,21 @@ function findHeaderImage(eventId: string): string | null {
 
 type PdfCol = { label: string; w: number; value: (r: ResultRow) => string };
 
-function buildPdfColumns(flags: PenaltyFlags, pageWidth: number): PdfCol[] {
+function buildPdfColumns(flags: PenaltyFlags, pageWidth: number, withLaps: boolean): PdfCol[] {
   const cols: PdfCol[] = [
     { label: "Pos", w: 36, value: (r) => String(r.position) },
     { label: "N°", w: 44, value: (r) => r.number },
-    { label: "Nombre", w: 140, value: (r) => r.name || "—" },
-    { label: "Categoría", w: 100, value: (r) => r.category || "—" },
-    { label: "Liga", w: 72, value: (r) => r.league || "—" },
-    { label: "Tiempo", w: 64, value: (r) => r.timeFormatted },
-    { label: "Salida", w: 72, value: (r) => r.partName || "—" },
+    { label: "Nombre", w: 130, value: (r) => r.name || "—" },
+    { label: "Categoría", w: 90, value: (r) => r.category || "—" },
+    { label: "Liga", w: 68, value: (r) => r.league || "—" },
   ];
+  if (withLaps) {
+    cols.push({ label: "Vueltas", w: 48, value: (r) => lapsCell(r) || "—" });
+  }
+  cols.push(
+    { label: "Tiempo", w: 64, value: (r) => r.timeFormatted },
+    { label: "Salida", w: 72, value: (r) => r.partName || "—" }
+  );
 
   if (flags.time) {
     cols.push({
@@ -293,7 +299,8 @@ export async function resultsToPdf(
       .stroke();
     y += 10;
 
-    const cols = buildPdfColumns(flags, pageWidth);
+    const withLaps = hasLapResults(exportRows);
+    const cols = buildPdfColumns(flags, pageWidth, withLaps);
     const fontSize = hasPenaltyCols ? 8 : 9;
     const tableHeaderH = 18;
 

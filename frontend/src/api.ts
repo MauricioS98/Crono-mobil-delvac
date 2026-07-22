@@ -60,7 +60,16 @@ export const api = {
   deleteTest: (eventId: string, testId: string) =>
     request(`/events/${eventId}/tests/${testId}`, { method: "DELETE" }),
 
-  createPart: (eventId: string, testId: string, data: { name?: string; combinedMode?: boolean }) =>
+  createPart: (
+    eventId: string,
+    testId: string,
+    data: {
+      name?: string;
+      combinedMode?: boolean;
+      combinedScoring?: "time" | "laps";
+      expectedLaps?: number | null;
+    }
+  ) =>
     request(`/events/${eventId}/tests/${testId}/parts`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -70,7 +79,12 @@ export const api = {
     eventId: string,
     testId: string,
     partId: string,
-    data: { name?: string; combinedMode?: boolean }
+    data: {
+      name?: string;
+      combinedMode?: boolean;
+      combinedScoring?: "time" | "laps";
+      expectedLaps?: number | null;
+    }
   ) =>
     request(`/events/${eventId}/tests/${testId}/parts/${partId}`, {
       method: "PUT",
