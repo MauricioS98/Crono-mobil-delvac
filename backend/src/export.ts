@@ -6,16 +6,42 @@ import type { Event, ResultRow, Test } from "./types.js";
 import { HEADERS_DIR } from "./storage.js";
 import { formatMs } from "./timeUtils.js";
 
-function hasAnyPenalty(rows: ResultRow[]): boolean {
-  return rows.some((r) => r.hasPenalty);
+interface PenaltyFlags {
+  time: boolean;
+  position: boolean;
+  comment: boolean;
+}
+
+function penaltyFlags(rows: ResultRow[]): PenaltyFlags {
+  return {
+    time: rows.some((r) => (r.timePenaltyMs || 0) > 0),
+    position: rows.some((r) => (r.positionPenalty || 0) > 0),
+    comment: rows.some((r) => Boolean((r.comment || "").trim())),
+  };
 }
 
 function esc(v: string): string {
   return `"${(v || "").replace(/"/g, '""')}"`;
 }
 
+function penaltyHeaders(flags: PenaltyFlags): string[] {
+  const h: string[] = [];
+  if (flags.time) h.push("Pen. tiempo");
+  if (flags.position) h.push("Pen. pos");
+  if (flags.comment) h.push("Comentario");
+  return h;
+}
+
+function penaltyCells(r: ResultRow, flags: PenaltyFlags): (string | number)[] {
+  const cells: (string | number)[] = [];
+  if (flags.time) cells.push(r.timePenaltyMs ? formatMs(r.timePenaltyMs) : "");
+  if (flags.position) cells.push(r.positionPenalty ? r.positionPenalty : "");
+  if (flags.comment) cells.push(r.comment || "");
+  return cells;
+}
+
 export function resultsToCsv(rows: ResultRow[], title: string): string {
-  const withPen = hasAnyPenalty(rows);
+  const flags = penaltyFlags(rows);
   const header = [
     "Pos",
     "N°",
@@ -25,7 +51,7 @@ export function resultsToCsv(rows: ResultRow[], title: string): string {
     "Tiempo",
     "Salida",
     "Segmento",
-    ...(withPen ? ["Pen. tiempo", "Pen. pos", "Comentario"] : []),
+    ...penaltyHeaders(flags),
   ];
   const lines = [
     `# ${title}`,
@@ -41,14 +67,8 @@ export function resultsToCsv(rows: ResultRow[], title: string): string {
         esc(r.partName || ""),
         esc(r.segmentLabel),
       ];
-      if (withPen) {
-        base.push(
-          r.timePenaltyMs ? formatMs(r.timePenaltyMs) : "",
-          r.positionPenalty ? String(r.positionPenalty) : "",
-          esc(r.comment || "")
-        );
-      }
-      return base.join(",");
+      const pens = penaltyCells(r, flags).map((c) => (typeof c === "string" ? esc(c) : c));
+      return [...base, ...pens].join(",");
     }),
   ];
   return lines.join("\n");
@@ -59,12 +79,13 @@ export async function resultsToExcel(
   title: string,
   eventName: string
 ): Promise<Buffer> {
-  const withPen = hasAnyPenalty(rows);
+  const flags = penaltyFlags(rows);
+  const penHeaders = penaltyHeaders(flags);
   const wb = new ExcelJS.Workbook();
   wb.creator = "GPMD Cronometraje";
   const ws = wb.addWorksheet("Resultados");
 
-  const colCount = withPen ? 11 : 8;
+  const colCount = 8 + penHeaders.length;
   ws.mergeCells(1, 1, 1, colCount);
   ws.getCell("A1").value = eventName;
   ws.getCell("A1").font = { bold: true, size: 16, color: { argb: "FF1A1A1A" } };
@@ -82,7 +103,7 @@ export async function resultsToExcel(
     "Tiempo",
     "Salida",
     "Segmento",
-    ...(withPen ? ["Pen. tiempo", "Pen. pos", "Comentario"] : []),
+    ...penHeaders,
   ];
   const headerRow = ws.addRow(headers);
   headerRow.eachCell((cell) => {
@@ -92,7 +113,7 @@ export async function resultsToExcel(
   });
 
   for (const r of rows) {
-    const vals: (string | number)[] = [
+    ws.addRow([
       r.position,
       r.number,
       r.name,
@@ -101,17 +122,15 @@ export async function resultsToExcel(
       r.timeFormatted,
       r.partName || "—",
       r.segmentLabel,
-    ];
-    if (withPen) {
-      vals.push(
-        r.timePenaltyMs ? formatMs(r.timePenaltyMs) : "",
-        r.positionPenalty || "",
-        r.comment || ""
-      );
-    }
-    ws.addRow(vals);
+      ...penaltyCells(r, flags),
+    ]);
   }
 
+  const penWidths = [
+    ...(flags.time ? [{ width: 12 }] : []),
+    ...(flags.position ? [{ width: 10 }] : []),
+    ...(flags.comment ? [{ width: 36 }] : []),
+  ];
   ws.columns = [
     { width: 6 },
     { width: 10 },
@@ -121,7 +140,7 @@ export async function resultsToExcel(
     { width: 14 },
     { width: 14 },
     { width: 18 },
-    ...(withPen ? [{ width: 12 }, { width: 10 }, { width: 36 }] : []),
+    ...penWidths,
   ];
 
   const buf = await wb.xlsx.writeBuffer();
@@ -136,6 +155,57 @@ function findHeaderImage(eventId: string): string | null {
   return null;
 }
 
+type PdfCol = { label: string; w: number; value: (r: ResultRow) => string };
+
+function buildPdfColumns(flags: PenaltyFlags, pageWidth: number): PdfCol[] {
+  const cols: PdfCol[] = [
+    { label: "Pos", w: 36, value: (r) => String(r.position) },
+    { label: "N°", w: 44, value: (r) => r.number },
+    { label: "Nombre", w: 140, value: (r) => r.name || "—" },
+    { label: "Categoría", w: 100, value: (r) => r.category || "—" },
+    { label: "Liga", w: 72, value: (r) => r.league || "—" },
+    { label: "Tiempo", w: 64, value: (r) => r.timeFormatted },
+    { label: "Salida", w: 72, value: (r) => r.partName || "—" },
+  ];
+
+  if (flags.time) {
+    cols.push({
+      label: "Pen. tiempo",
+      w: 58,
+      value: (r) => (r.timePenaltyMs ? formatMs(r.timePenaltyMs) : "—"),
+    });
+  }
+  if (flags.position) {
+    cols.push({
+      label: "Pen. pos",
+      w: 42,
+      value: (r) => (r.positionPenalty ? `+${r.positionPenalty}` : "—"),
+    });
+  }
+  if (flags.comment) {
+    cols.push({
+      label: "Comentario",
+      w: 120,
+      value: (r) => r.comment || "",
+    });
+  }
+
+  const total = cols.reduce((s, c) => s + c.w, 0);
+  const scale = pageWidth / total;
+  return cols.map((c) => ({ ...c, w: c.w * scale }));
+}
+
+/** Draw text without PDFKit auto-creating pages */
+function pdfText(
+  doc: PDFKit.PDFDocument,
+  text: string,
+  x: number,
+  y: number,
+  opts: PDFKit.Mixins.TextOptions = {}
+) {
+  doc.text(text, x, y, { lineBreak: false, ...opts });
+}
+
 export async function resultsToPdf(
   rows: ResultRow[],
   title: string,
@@ -143,11 +213,16 @@ export async function resultsToPdf(
   test?: Test | null
 ): Promise<Buffer> {
   return new Promise((resolve, reject) => {
-    const withPen = hasAnyPenalty(rows);
+    const flags = penaltyFlags(rows);
+    const hasPenaltyCols = flags.time || flags.position || flags.comment;
+    const FOOTER_H = 40;
+
     const doc = new PDFDocument({
       size: "A4",
-      layout: "landscape",
-      margins: { top: 36, bottom: 44, left: 36, right: 36 },
+      layout: hasPenaltyCols ? "landscape" : "portrait",
+      // Bottom margin reserves footer zone so table text never auto-paginates into empty pages
+      margins: { top: 36, bottom: FOOTER_H + 8, left: 36, right: 36 },
+      bufferPages: true,
       info: { Title: title, Author: "GPMD Cronometraje" },
     });
     const chunks: Buffer[] = [];
@@ -155,7 +230,9 @@ export async function resultsToPdf(
     doc.on("end", () => resolve(Buffer.concat(chunks)));
     doc.on("error", reject);
 
-    const pageWidth = doc.page.width - doc.page.margins.left - doc.page.margins.right;
+    const left = doc.page.margins.left;
+    const pageWidth = doc.page.width - left - doc.page.margins.right;
+    const contentBottom = () => doc.page.height - doc.page.margins.bottom;
     let y = doc.page.margins.top;
 
     const headerPath = event.headerImage
@@ -166,7 +243,7 @@ export async function resultsToPdf(
 
     if (headerPath && fs.existsSync(headerPath)) {
       try {
-        doc.image(headerPath, doc.page.margins.left, y, {
+        doc.image(headerPath, left, y, {
           fit: [pageWidth, 70],
           align: "center",
         });
@@ -176,164 +253,118 @@ export async function resultsToPdf(
       }
     }
 
-    doc
-      .fillColor("#0B3D2E")
-      .fontSize(18)
-      .font("Helvetica-Bold")
-      .text(event.name, doc.page.margins.left, y, { width: pageWidth, align: "center" });
+    doc.fillColor("#0B3D2E").fontSize(18).font("Helvetica-Bold");
+    pdfText(doc, event.name, left, y, { width: pageWidth, align: "center", lineBreak: true });
     y = doc.y + 4;
 
-    doc
-      .fillColor("#555555")
-      .fontSize(11)
-      .font("Helvetica")
-      .text(title, { width: pageWidth, align: "center" });
+    doc.fillColor("#555555").fontSize(11).font("Helvetica");
+    pdfText(doc, title, left, y, { width: pageWidth, align: "center", lineBreak: true });
+    y = doc.y + 2;
 
     if (event.date || event.location) {
-      doc
-        .fillColor("#777777")
-        .fontSize(9)
-        .text([event.date, event.location].filter(Boolean).join(" · "), {
-          width: pageWidth,
-          align: "center",
-        });
+      doc.fillColor("#777777").fontSize(9);
+      pdfText(doc, [event.date, event.location].filter(Boolean).join(" · "), left, y, {
+        width: pageWidth,
+        align: "center",
+        lineBreak: true,
+      });
+      y = doc.y + 2;
     }
 
     if (test?.showDescriptionInPdf && test.description?.trim()) {
-      y = doc.y + 8;
-      doc
-        .fillColor("#333333")
-        .fontSize(9)
-        .font("Helvetica")
-        .text(test.description.trim(), doc.page.margins.left, y, {
-          width: pageWidth,
-          align: "center",
-        });
+      y += 6;
+      doc.fillColor("#333333").fontSize(9).font("Helvetica");
+      pdfText(doc, test.description.trim(), left, y, {
+        width: pageWidth,
+        align: "center",
+        lineBreak: true,
+      });
+      y = doc.y + 2;
     }
 
-    y = doc.y + 12;
+    y += 10;
     doc
-      .moveTo(doc.page.margins.left, y)
-      .lineTo(doc.page.margins.left + pageWidth, y)
+      .moveTo(left, y)
+      .lineTo(left + pageWidth, y)
       .strokeColor("#0B3D2E")
       .lineWidth(1.5)
       .stroke();
     y += 10;
 
-    const cols = withPen
-      ? [
-          { label: "Pos", w: 32 },
-          { label: "N°", w: 42 },
-          { label: "Nombre", w: 130 },
-          { label: "Categoría", w: 90 },
-          { label: "Liga", w: 70 },
-          { label: "Tiempo", w: 62 },
-          { label: "Salida", w: 70 },
-          { label: "Pen.t", w: 50 },
-          { label: "Pen.p", w: 36 },
-          { label: "Comentario", w: 130 },
-        ]
-      : [
-          { label: "Pos", w: 36 },
-          { label: "N°", w: 48 },
-          { label: "Nombre", w: 160 },
-          { label: "Categoría", w: 110 },
-          { label: "Liga", w: 80 },
-          { label: "Tiempo", w: 70 },
-          { label: "Salida", w: 90 },
-        ];
+    const cols = buildPdfColumns(flags, pageWidth);
+    const fontSize = hasPenaltyCols ? 8 : 9;
+    const tableHeaderH = 18;
 
-    const drawHeader = (yy: number) => {
-      doc.rect(doc.page.margins.left, yy, pageWidth, 18).fill("#0B3D2E");
-      let x = doc.page.margins.left + 4;
-      doc.fillColor("#FFFFFF").fontSize(8).font("Helvetica-Bold");
+    const drawTableHeader = (yy: number) => {
+      doc.rect(left, yy, pageWidth, tableHeaderH).fill("#0B3D2E");
+      let x = left + 4;
+      doc.fillColor("#FFFFFF").fontSize(fontSize).font("Helvetica-Bold");
       for (const c of cols) {
-        doc.text(c.label, x, yy + 5, { width: c.w, continued: false });
+        pdfText(doc, c.label, x, yy + 5, { width: c.w - 4 });
         x += c.w;
       }
-      return yy + 20;
+      return yy + tableHeaderH + 2;
     };
 
-    y = drawHeader(y);
+    y = drawTableHeader(y);
 
-    const footerHeight = 36;
-    let pageNum = 1;
-    const drawFooter = () => {
-      const fy = doc.page.height - 32;
+    const drawFooterOnCurrentPage = (pageLabel: number) => {
+      const prevBottom = doc.page.margins.bottom;
+      doc.page.margins.bottom = 0;
+      const fy = doc.page.height - 28;
       doc
-        .moveTo(doc.page.margins.left, fy - 8)
-        .lineTo(doc.page.margins.left + pageWidth, fy - 8)
+        .moveTo(left, fy - 8)
+        .lineTo(left + pageWidth, fy - 8)
         .strokeColor("#CCCCCC")
         .lineWidth(0.5)
         .stroke();
-      doc
-        .fillColor("#888888")
-        .fontSize(8)
-        .font("Helvetica")
-        .text(
-          event.footerText || "Gran Premio Mobil Delvac · Cronometraje GPMD",
-          doc.page.margins.left,
-          fy,
-          { width: pageWidth * 0.7, align: "left" }
-        );
-      doc.text(`Pág. ${pageNum}`, doc.page.margins.left, fy, {
+      doc.fillColor("#888888").fontSize(8).font("Helvetica");
+      pdfText(doc, event.footerText || "Gran Premio Mobil Delvac · Cronometraje GPMD", left, fy, {
+        width: pageWidth * 0.7,
+        align: "left",
+      });
+      pdfText(doc, `Pág. ${pageLabel}`, left, fy, {
         width: pageWidth,
         align: "right",
       });
+      doc.page.margins.bottom = prevBottom;
     };
 
-    doc.font("Helvetica").fontSize(8);
+    doc.font("Helvetica").fontSize(fontSize);
     for (let i = 0; i < rows.length; i++) {
-      const rowH = withPen && rows[i].comment ? 22 : 15;
-      if (y > doc.page.height - footerHeight - rowH - 8) {
-        drawFooter();
-        doc.addPage();
-        pageNum += 1;
-        y = doc.page.margins.top;
-        y = drawHeader(y);
-      }
-
       const r = rows[i];
-      if (i % 2 === 0) {
-        doc.rect(doc.page.margins.left, y - 2, pageWidth, rowH).fill("#F3F7F5");
+      const rowH = flags.comment && r.comment.trim() ? 20 : 15;
+
+      if (y + rowH > contentBottom()) {
+        doc.addPage();
+        y = doc.page.margins.top;
+        y = drawTableHeader(y);
       }
 
-      const values = withPen
-        ? [
-            String(r.position),
-            r.number,
-            r.name || "—",
-            r.category || "—",
-            r.league || "—",
-            r.timeFormatted,
-            r.partName || "—",
-            r.timePenaltyMs ? formatMs(r.timePenaltyMs) : "—",
-            r.positionPenalty ? `+${r.positionPenalty}` : "—",
-            r.comment || "",
-          ]
-        : [
-            String(r.position),
-            r.number,
-            r.name || "—",
-            r.category || "—",
-            r.league || "—",
-            r.timeFormatted,
-            r.partName || "—",
-          ];
+      if (i % 2 === 0) {
+        doc.rect(left, y - 1, pageWidth, rowH).fill("#F3F7F5");
+      }
 
-      let x = doc.page.margins.left + 4;
+      let x = left + 4;
       doc.fillColor("#1A1A1A");
       if (r.position <= 3) doc.font("Helvetica-Bold");
       else doc.font("Helvetica");
+      doc.fontSize(fontSize);
 
-      for (let c = 0; c < cols.length; c++) {
-        doc.text(values[c], x, y, { width: cols[c].w - 2, lineBreak: false, height: rowH });
-        x += cols[c].w;
+      for (const c of cols) {
+        pdfText(doc, c.value(r), x, y + 2, { width: c.w - 4 });
+        x += c.w;
       }
       y += rowH;
     }
 
-    drawFooter();
+    // Footers only on pages that were actually used
+    const range = doc.bufferedPageRange();
+    for (let i = 0; i < range.count; i++) {
+      doc.switchToPage(range.start + i);
+      drawFooterOnCurrentPage(i + 1);
+    }
+
     doc.end();
   });
 }
