@@ -1,0 +1,7 @@
+node_modules/
+dist/
+*.tmp
+.DS_Store
+*.log
+data/uploads/headers/*
+!data/uploads/headers/.gitkeep

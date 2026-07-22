@@ -1,0 +1,90 @@
+export interface TimingPoint {
+  id: string;
+  name: string;
+  offsetMs: number;
+  order: number;
+  offsetFormatted?: string;
+}
+
+export interface Pilot {
+  id: string;
+  number: string;
+  name: string;
+  category: string;
+  league: string;
+  notes?: string;
+}
+
+export interface Passage {
+  number: string;
+  name: string;
+  tmPasosMs: number;
+  tmPasosRaw: string;
+  lapTimeMs: number | null;
+  lapTimeRaw: string;
+  clase: string;
+}
+
+export interface FlagEvent {
+  type: string;
+  tmPasosMs: number;
+  tmPasosRaw: string;
+  label: string;
+}
+
+export interface ParsedCsv {
+  filename: string;
+  passages: Passage[];
+  flags: FlagEvent[];
+  racePassages: Passage[];
+}
+
+export interface PartCsvSlot {
+  timingPointId: string;
+  filename: string;
+  parsed: ParsedCsv;
+}
+
+export interface TestPart {
+  id: string;
+  name: string;
+  order: number;
+  combinedMode: boolean;
+  csvs: PartCsvSlot[];
+}
+
+export interface Test {
+  id: string;
+  name: string;
+  description: string;
+  showDescriptionInPdf: boolean;
+  order: number;
+  parts: TestPart[];
+}
+
+export interface Event {
+  id: string;
+  name: string;
+  date: string;
+  location: string;
+  headerImage: string | null;
+  footerText: string;
+  timingPoints: TimingPoint[];
+  tests: Test[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ResultRow {
+  position: number;
+  number: string;
+  name: string;
+  category: string;
+  league: string;
+  timeMs: number;
+  timeFormatted: string;
+  partId?: string;
+  partName?: string;
+  missingPilot: boolean;
+  segmentLabel: string;
+}
