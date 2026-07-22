@@ -3,6 +3,7 @@ import PDFDocument from "pdfkit";
 import fs from "fs";
 import path from "path";
 import type { Event, FusionRow, FusionTestMeta, ResultRow, Test } from "./types.js";
+import type { LapByLapRow } from "./results.js";
 import { HEADERS_DIR } from "./storage.js";
 import { formatMs } from "./timeUtils.js";
 
@@ -212,6 +213,59 @@ function pdfText(
   doc.text(text, x, y, { lineBreak: false, ...opts });
 }
 
+const PDF_ROW_PAD = 6;
+const PDF_MIN_ROW_H = 14;
+const PDF_MAX_CELL_LINES = 3;
+
+function pdfWrappedHeight(
+  doc: PDFKit.PDFDocument,
+  text: string,
+  colWidth: number,
+  fontSize: number,
+  font: string
+): number {
+  doc.font(font).fontSize(fontSize);
+  const innerW = Math.max(colWidth - 4, 8);
+  return doc.heightOfString(text || "—", { width: innerW });
+}
+
+function pdfDrawCell(
+  doc: PDFKit.PDFDocument,
+  text: string,
+  x: number,
+  y: number,
+  colWidth: number
+) {
+  const prevY = doc.y;
+  const innerW = Math.max(colWidth - 4, 8);
+  doc.text(text || "—", x, y + 2, { width: innerW, lineBreak: false });
+  doc.y = prevY;
+}
+
+function computePdfRowLayout<T>(
+  doc: PDFKit.PDFDocument,
+  cols: { w: number; value: (r: T) => string }[],
+  row: T,
+  baseFontSize: number,
+  font: string
+): { fontSize: number; rowH: number } {
+  let fontSize = baseFontSize;
+  let rowH = PDF_MIN_ROW_H;
+
+  for (let attempt = 0; attempt < 5; attempt++) {
+    let maxH = 0;
+    for (const c of cols) {
+      maxH = Math.max(maxH, pdfWrappedHeight(doc, c.value(row), c.w, fontSize, font));
+    }
+    rowH = Math.max(PDF_MIN_ROW_H, maxH) + PDF_ROW_PAD;
+    const lineLimit = fontSize * 1.35 * PDF_MAX_CELL_LINES;
+    if (maxH <= lineLimit || fontSize <= 6) break;
+    fontSize -= 0.5;
+  }
+
+  return { fontSize, rowH };
+}
+
 export async function resultsToPdf(
   rows: ResultRow[],
   title: string,
@@ -342,7 +396,14 @@ export async function resultsToPdf(
     doc.font("Helvetica").fontSize(fontSize);
     for (let i = 0; i < exportRows.length; i++) {
       const r = exportRows[i];
-      const rowH = flags.comment && r.comment.trim() ? 20 : 15;
+      const rowFont = r.position <= 3 ? "Helvetica-Bold" : "Helvetica";
+      const { fontSize: rowFontSize, rowH } = computePdfRowLayout(
+        doc,
+        cols,
+        r,
+        fontSize,
+        rowFont
+      );
 
       if (y + rowH > contentBottom()) {
         doc.addPage();
@@ -355,19 +416,195 @@ export async function resultsToPdf(
       }
 
       let x = left + 4;
-      doc.fillColor("#1A1A1A");
-      if (r.position <= 3) doc.font("Helvetica-Bold");
-      else doc.font("Helvetica");
-      doc.fontSize(fontSize);
+      doc.fillColor("#1A1A1A").font(rowFont).fontSize(rowFontSize);
 
       for (const c of cols) {
-        pdfText(doc, c.value(r), x, y + 2, { width: c.w - 4 });
+        pdfDrawCell(doc, c.value(r), x, y, c.w);
         x += c.w;
       }
       y += rowH;
     }
 
     // Footers only on pages that were actually used
+    const range = doc.bufferedPageRange();
+    for (let i = 0; i < range.count; i++) {
+      doc.switchToPage(range.start + i);
+      drawFooterOnCurrentPage(i + 1);
+    }
+
+    doc.end();
+  });
+}
+
+type LapPdfCol = { label: string; w: number; value: (r: LapByLapRow) => string };
+
+export async function lapByLapToPdf(
+  rows: LapByLapRow[],
+  maxLaps: number,
+  title: string,
+  event: Event,
+  test?: Test | null
+): Promise<Buffer> {
+  return new Promise((resolve, reject) => {
+    const FOOTER_H = 40;
+    const useLandscape = maxLaps > 4;
+
+    const doc = new PDFDocument({
+      size: "A4",
+      layout: useLandscape ? "landscape" : "portrait",
+      margins: { top: 36, bottom: FOOTER_H + 8, left: 36, right: 36 },
+      bufferPages: true,
+      info: { Title: title, Author: "GPMD Cronometraje" },
+    });
+    const chunks: Buffer[] = [];
+    doc.on("data", (c) => chunks.push(c));
+    doc.on("end", () => resolve(Buffer.concat(chunks)));
+    doc.on("error", reject);
+
+    const left = doc.page.margins.left;
+    const pageWidth = doc.page.width - left - doc.page.margins.right;
+    const contentBottom = () => doc.page.height - doc.page.margins.bottom;
+    let y = doc.page.margins.top;
+
+    const headerPath = event.headerImage
+      ? path.isAbsolute(event.headerImage)
+        ? event.headerImage
+        : path.join(HEADERS_DIR, path.basename(event.headerImage))
+      : findHeaderImage(event.id);
+
+    if (headerPath && fs.existsSync(headerPath)) {
+      try {
+        doc.image(headerPath, left, y, { fit: [pageWidth, 70], align: "center" });
+        y += 80;
+      } catch {
+        // ignore
+      }
+    }
+
+    doc.fillColor("#0B3D2E").fontSize(18).font("Helvetica-Bold");
+    pdfText(doc, event.name, left, y, { width: pageWidth, align: "center", lineBreak: true });
+    y = doc.y + 4;
+
+    doc.fillColor("#555555").fontSize(11).font("Helvetica");
+    pdfText(doc, title, left, y, { width: pageWidth, align: "center", lineBreak: true });
+    y = doc.y + 2;
+
+    if (event.date || event.location) {
+      doc.fillColor("#777777").fontSize(9);
+      pdfText(doc, [event.date, event.location].filter(Boolean).join(" · "), left, y, {
+        width: pageWidth,
+        align: "center",
+        lineBreak: true,
+      });
+      y = doc.y + 2;
+    }
+
+    if (test?.showDescriptionInPdf && test.description?.trim()) {
+      y += 6;
+      doc.fillColor("#333333").fontSize(9).font("Helvetica");
+      pdfText(doc, test.description.trim(), left, y, {
+        width: pageWidth,
+        align: "center",
+        lineBreak: true,
+      });
+      y = doc.y + 2;
+    }
+
+    y += 10;
+    doc.moveTo(left, y).lineTo(left + pageWidth, y).strokeColor("#0B3D2E").lineWidth(1.5).stroke();
+    y += 10;
+
+    const cols: LapPdfCol[] = [
+      { label: "Pos", w: 28, value: (r) => String(r.position) },
+      { label: "N°", w: 36, value: (r) => r.number },
+      { label: "Nombre", w: 100, value: (r) => r.name || "—" },
+    ];
+    for (let i = 1; i <= maxLaps; i++) {
+      cols.push({
+        label: `V${i}`,
+        w: 52,
+        value: (r) => r.lapTimesFormatted[i - 1] || "—",
+      });
+    }
+    cols.push({
+      label: "Vueltas",
+      w: 44,
+      value: (r) =>
+        r.expectedLaps != null ? `${r.lapsCompleted}/${r.expectedLaps}` : String(r.lapsCompleted),
+    });
+    cols.push({ label: "Total", w: 56, value: (r) => r.totalTimeFormatted });
+
+    const totalW = cols.reduce((s, c) => s + c.w, 0);
+    const scale = pageWidth / totalW;
+    const scaledCols = cols.map((c) => ({ ...c, w: c.w * scale }));
+
+    const fontSize = useLandscape ? 7.5 : 8;
+    const tableHeaderH = 18;
+
+    const drawTableHeader = (yy: number) => {
+      doc.rect(left, yy, pageWidth, tableHeaderH).fill("#0B3D2E");
+      let x = left + 3;
+      doc.fillColor("#FFFFFF").fontSize(fontSize).font("Helvetica-Bold");
+      for (const c of scaledCols) {
+        pdfText(doc, c.label, x, yy + 5, { width: c.w - 4 });
+        x += c.w;
+      }
+      return yy + tableHeaderH + 2;
+    };
+
+    y = drawTableHeader(y);
+
+    const drawFooterOnCurrentPage = (pageLabel: number) => {
+      const prevBottom = doc.page.margins.bottom;
+      doc.page.margins.bottom = 0;
+      const fy = doc.page.height - 28;
+      doc
+        .moveTo(left, fy - 8)
+        .lineTo(left + pageWidth, fy - 8)
+        .strokeColor("#CCCCCC")
+        .lineWidth(0.5)
+        .stroke();
+      doc.fillColor("#888888").fontSize(8).font("Helvetica");
+      pdfText(doc, event.footerText || "Gran Premio Mobil Delvac · Cronometraje GPMD", left, fy, {
+        width: pageWidth * 0.7,
+        align: "left",
+      });
+      pdfText(doc, `Pág. ${pageLabel}`, left, fy, { width: pageWidth, align: "right" });
+      doc.page.margins.bottom = prevBottom;
+    };
+
+    doc.font("Helvetica").fontSize(fontSize);
+    for (let i = 0; i < rows.length; i++) {
+      const r = rows[i];
+      const rowFont = r.position <= 3 ? "Helvetica-Bold" : "Helvetica";
+      const { fontSize: rowFontSize, rowH } = computePdfRowLayout(
+        doc,
+        scaledCols,
+        r,
+        fontSize,
+        rowFont
+      );
+
+      if (y + rowH > contentBottom()) {
+        doc.addPage();
+        y = doc.page.margins.top;
+        y = drawTableHeader(y);
+      }
+
+      if (i % 2 === 0) {
+        doc.rect(left, y - 1, pageWidth, rowH).fill("#F3F7F5");
+      }
+
+      let x = left + 3;
+      doc.fillColor("#1A1A1A").font(rowFont).fontSize(rowFontSize);
+
+      for (const c of scaledCols) {
+        pdfDrawCell(doc, c.value(r), x, y, c.w);
+        x += c.w;
+      }
+      y += rowH;
+    }
+
     const range = doc.bufferedPageRange();
     for (let i = 0; i < range.count; i++) {
       doc.switchToPage(range.start + i);
@@ -581,7 +818,14 @@ export async function fusionToPdf(
     doc.font("Helvetica").fontSize(fontSize);
     for (let i = 0; i < rows.length; i++) {
       const r = rows[i];
-      const rowH = 15;
+      const rowFont = r.position <= 3 ? "Helvetica-Bold" : "Helvetica";
+      const { fontSize: rowFontSize, rowH } = computePdfRowLayout(
+        doc,
+        scaledCols,
+        r,
+        fontSize,
+        rowFont
+      );
 
       if (y + rowH > contentBottom()) {
         doc.addPage();
@@ -594,13 +838,10 @@ export async function fusionToPdf(
       }
 
       let x = left + 3;
-      doc.fillColor("#1A1A1A");
-      if (r.position <= 3) doc.font("Helvetica-Bold");
-      else doc.font("Helvetica");
-      doc.fontSize(fontSize);
+      doc.fillColor("#1A1A1A").font(rowFont).fontSize(rowFontSize);
 
       for (const c of scaledCols) {
-        pdfText(doc, c.value(r), x, y + 2, { width: c.w - 4 });
+        pdfDrawCell(doc, c.value(r), x, y, c.w);
         x += c.w;
       }
       y += rowH;

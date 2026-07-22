@@ -13,9 +13,9 @@ import {
 import type { Event, Pilot, Test, TestPart, TimingPoint } from "./types.js";
 import { parseOffsetToMs, formatOffset } from "./timeUtils.js";
 import { parseTimingCsv } from "./csvParser.js";
-import { computePartResults, computeTestResults, filterNewPilotsVsEarlier, getPart, getTest, resolveTestTimingPoints, upsertPenalty } from "./results.js";
+import { computePartResults, computeTestResults, computeLapByLapResults, filterNewPilotsVsEarlier, getPart, getTest, isLapScoringPart, resolveTestTimingPoints, upsertPenalty } from "./results.js";
 import { computeFusionResults } from "./fusion.js";
-import { fusionToCsv, fusionToExcel, fusionToPdf, resultsToCsv, resultsToExcel, resultsToPdf } from "./export.js";
+import { fusionToCsv, fusionToExcel, fusionToPdf, lapByLapToPdf, resultsToCsv, resultsToExcel, resultsToPdf } from "./export.js";
 import { importPilotsFromCsv, previewPilotsCsv, type ColumnMapping } from "./pilotsCsv.js";
 
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 20 * 1024 * 1024 } });
@@ -527,6 +527,38 @@ router.get("/events/:id/tests/:testId/export/:format", async (req, res) => {
   const safeName = title.replace(/[^\w\-]+/g, "_");
 
   try {
+    if (format === "pdf-vueltas") {
+      if (!partId) {
+        return res.status(400).json({
+          error: "Indica la salida (calcula resultado parcial) para exportar vuelta a vuelta.",
+        });
+      }
+      const part = getPart(test, partId);
+      if (!part) return res.status(404).json({ error: "Parte no encontrada" });
+      if (!isLapScoringPart(part)) {
+        return res.status(400).json({
+          error: "La exportación vuelta a vuelta solo está disponible con CSV único por vueltas.",
+        });
+      }
+      const lapTitle = `${title} — Vuelta a vuelta`;
+      const { rows: lapRows, maxLaps, warning } = computeLapByLapResults(
+        event,
+        test,
+        part,
+        fromId,
+        toId
+      );
+      if (lapRows.length === 0) {
+        return res.status(400).json({ error: warning || "Sin vueltas para exportar" });
+      }
+      const buf = await lapByLapToPdf(lapRows, maxLaps, lapTitle, event, test);
+      res.setHeader("Content-Type", "application/pdf");
+      res.setHeader(
+        "Content-Disposition",
+        `attachment; filename="${safeName}_vuelta_a_vuelta.pdf"`
+      );
+      return res.send(buf);
+    }
     if (format === "csv") {
       const csv = resultsToCsv(rows, title);
       res.setHeader("Content-Type", "text/csv; charset=utf-8");
@@ -548,7 +580,7 @@ router.get("/events/:id/tests/:testId/export/:format", async (req, res) => {
       res.setHeader("Content-Disposition", `attachment; filename="${safeName}.pdf"`);
       return res.send(buf);
     }
-    return res.status(400).json({ error: "Formato no soportado (csv|xlsx|pdf)" });
+    return res.status(400).json({ error: "Formato no soportado (csv|xlsx|pdf|pdf-vueltas)" });
   } catch (err) {
     console.error(err);
     return res.status(500).json({ error: "Error al exportar" });

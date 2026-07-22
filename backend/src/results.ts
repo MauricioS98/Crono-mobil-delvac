@@ -163,6 +163,107 @@ function isLapScoring(part: TestPart): boolean {
   return part.combinedMode && part.combinedScoring === "laps";
 }
 
+export function isLapScoringPart(part: TestPart): boolean {
+  return isLapScoring(part);
+}
+
+export interface LapByLapRow {
+  position: number;
+  number: string;
+  name: string;
+  category: string;
+  league: string;
+  lapTimesFormatted: string[];
+  lapsCompleted: number;
+  expectedLaps: number | null;
+  totalTimeFormatted: string;
+  totalTimeMs: number;
+}
+
+function lapTimesListByPilot(parsed: ParsedCsv): Map<string, number[]> {
+  const map = new Map<string, number[]>();
+  for (const p of parsed.racePassages) {
+    if (p.lapTimeMs == null || p.lapTimeMs <= 0) continue;
+    const key = normalizeNumber(p.number);
+    if (!map.has(key)) map.set(key, []);
+    map.get(key)!.push(p.lapTimeMs);
+  }
+  return map;
+}
+
+export function computeLapByLapResults(
+  event: Event,
+  test: Test,
+  part: TestPart,
+  fromPointId?: string,
+  toPointId?: string
+): { rows: LapByLapRow[]; maxLaps: number; warning?: string } {
+  if (!isLapScoring(part)) {
+    return {
+      rows: [],
+      maxLaps: 0,
+      warning: "Solo disponible para CSV único clasificado por vueltas.",
+    };
+  }
+
+  const slot = part.csvs[0];
+  if (!slot) {
+    return { rows: [], maxLaps: 0, warning: "No hay CSV cargado en esta parte." };
+  }
+
+  const pilots = event.pilots || [];
+  const summary = lapResultsByPilot(slot.parsed);
+  const lapLists = lapTimesListByPilot(slot.parsed);
+  const expected = part.expectedLaps ?? null;
+
+  let rows: LapByLapRow[] = [];
+  for (const [key, s] of summary) {
+    const lapMs = lapLists.get(key) || [];
+    const pilot = pilots.find((p) => normalizeNumber(p.number) === key);
+    rows.push({
+      position: 0,
+      number: s.number,
+      name: pilot?.name || s.name,
+      category: pilot?.category || "",
+      league: pilot?.league || "",
+      lapTimesFormatted: lapMs.map((ms) => formatMs(ms)),
+      lapsCompleted: s.laps,
+      expectedLaps: expected,
+      totalTimeFormatted: formatMs(s.totalTimeMs),
+      totalTimeMs: s.totalTimeMs,
+    });
+  }
+
+  const { fromId, toId } = resolveTestTimingPoints(event, test, fromPointId, toPointId);
+  const { rows: partRows } = computePartResults(event, test, part, fromId, toId);
+  const { rows: filteredPartRows } = filterNewPilotsVsEarlier(
+    event,
+    test,
+    part,
+    partRows,
+    fromId,
+    toId
+  );
+  const allowed = new Set(filteredPartRows.map((r) => normalizeNumber(r.number)));
+  rows = rows.filter((r) => allowed.has(normalizeNumber(r.number)));
+
+  rows.sort((a, b) => {
+    if (b.lapsCompleted !== a.lapsCompleted) return b.lapsCompleted - a.lapsCompleted;
+    return a.totalTimeMs - b.totalTimeMs;
+  });
+  rows.forEach((r, i) => {
+    r.position = i + 1;
+  });
+
+  const maxLaps = Math.max(expected ?? 0, ...rows.map((r) => r.lapTimesFormatted.length), 0);
+
+  if (rows.length === 0) {
+    return { rows: [], maxLaps: 0, warning: "No se encontraron vueltas completadas en el CSV." };
+  }
+
+  return { rows, maxLaps };
+}
+
 function compareLapResultRows(a: ResultRow, b: ResultRow): number {
   const lapsA = a.laps ?? 0;
   const lapsB = b.laps ?? 0;

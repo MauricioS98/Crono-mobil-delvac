@@ -400,6 +400,16 @@ export function EventDetailPage() {
               const testResults = resultsByTest[test.id];
               const showLapsCol =
                 testResults?.rows.some((r) => r.laps != null && r.laps > 0) ?? false;
+              const lapExportPartId =
+                testResults?.partId &&
+                test.parts.find((p) => p.id === testResults.partId)?.combinedScoring === "laps"
+                  ? testResults.partId
+                  : selectedPart?.combinedMode && selectedPart.combinedScoring === "laps"
+                    ? selectedPartId
+                    : undefined;
+              const showLapByLapExport = Boolean(
+                lapExportPartId && testResults && testResults.rows.length > 0
+              );
 
               return (
                 <div key={test.id} className={`accordion-item ${open ? "open" : ""}`}>
@@ -799,6 +809,19 @@ export function EventDetailPage() {
                                   {fmt.toUpperCase()}
                                 </a>
                               ))}
+                              {showLapByLapExport && (
+                                <a
+                                  className="btn btn-ghost btn-sm"
+                                  href={api.exportUrl(event.id, test.id, "pdf-vueltas", {
+                                    from: test.fromPointId || points[0]?.id,
+                                    to: test.toPointId || points[1]?.id,
+                                    partId: lapExportPartId,
+                                  })}
+                                  title="PDF con el tiempo de cada vuelta por piloto"
+                                >
+                                  Vuelta a vuelta
+                                </a>
+                              )}
                             </div>
                             <div className="table-wrap results-table-wrap">
                               <table className="results-table">
