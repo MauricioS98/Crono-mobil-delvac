@@ -1,11 +1,39 @@
-import type { Event, Test } from "./types.js";
+import { normalizeNumber } from "./storage.js";
+import type { Event, Test, TestPart } from "./types.js";
+
+function penaltyIsActive(p: {
+  timePenaltyMs?: number;
+  positionPenalty?: number;
+  comment?: string;
+}): boolean {
+  return (
+    (p.timePenaltyMs || 0) > 0 ||
+    (p.positionPenalty || 0) > 0 ||
+    Boolean((p.comment || "").trim())
+  );
+}
 
 export function testHasPenalties(test: Test): boolean {
+  return (test.penalties || []).some(penaltyIsActive);
+}
+
+function pilotNumbersInPart(part: TestPart): Set<string> {
+  const nums = new Set<string>();
+  for (const slot of part.csvs || []) {
+    const passages = slot.parsed?.racePassages || [];
+    for (const p of passages) {
+      if (p.number) nums.add(normalizeNumber(p.number));
+    }
+  }
+  return nums;
+}
+
+/** Penalties for pilots that appear in this salida's CSV data */
+export function partHasPenalties(test: Test, part: TestPart): boolean {
+  const inPart = pilotNumbersInPart(part);
+  if (inPart.size === 0) return false;
   return (test.penalties || []).some(
-    (p) =>
-      (p.timePenaltyMs || 0) > 0 ||
-      (p.positionPenalty || 0) > 0 ||
-      Boolean((p.comment || "").trim())
+    (p) => inPart.has(normalizeNumber(p.number)) && penaltyIsActive(p)
   );
 }
 
@@ -32,9 +60,14 @@ export function assertCanDeleteTest(event: Event, test: Test): string | null {
   return null;
 }
 
-export function assertCanDeletePart(test: Test): string | null {
-  if (testHasPenalties(test)) {
-    return "No se puede eliminar la salida porque la prueba tiene penalizaciones registradas. Elimina las penalizaciones primero.";
+export function assertCanDeletePart(event: Event, test: Test, part: TestPart): string | null {
+  const fusions = testUsedInFusions(event, test.id);
+  if (fusions.length > 0) {
+    const names = fusions.map((f) => `«${f.name}»`).join(", ");
+    return `No se puede eliminar la salida porque «${test.name}» está incluida en la fusión ${names}. Elimina esas fusiones primero.`;
+  }
+  if (partHasPenalties(test, part)) {
+    return "No se puede eliminar la salida porque tiene pilotos con penalizaciones. Elimina las penalizaciones de esta salida y pulsa OK en cada fila antes de borrar.";
   }
   return null;
 }

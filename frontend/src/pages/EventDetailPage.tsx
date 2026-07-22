@@ -136,6 +136,7 @@ export function EventDetailPage() {
         positionPenalty: Number(draft.positionPenalty || 0),
         comment: draft.comment,
       });
+      await load();
       const current = resultsByTest[testId];
       await refreshResults(testId, current?.partId ?? null);
       setMsg(`Penalización guardada para #${number}`);
@@ -252,9 +253,22 @@ export function EventDetailPage() {
     });
   };
 
-  const requestDeletePart = (test: Test, part: TestPart) => {
+  const requestDeletePart = async (test: Test, part: TestPart) => {
     if (!event) return;
-    const block = canDeletePart(test);
+    let freshEvent = event;
+    let freshTest = test;
+    let freshPart = part;
+    try {
+      freshEvent = await api.getEvent(event.id);
+      setEvent(freshEvent);
+      freshTest = freshEvent.tests.find((t) => t.id === test.id) ?? test;
+      freshPart = freshTest.parts.find((p) => p.id === part.id) ?? part;
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Error al verificar la salida");
+      return;
+    }
+
+    const block = canDeletePart(freshEvent, freshTest, freshPart);
     if (block) {
       setDialog({
         title: "No se puede eliminar",
@@ -266,13 +280,13 @@ export function EventDetailPage() {
     }
     setDialog({
       title: "Eliminar salida",
-      message: `¿Eliminar «${part.name}»? Se perderán los CSV cargados en esta salida.`,
+      message: `¿Eliminar «${freshPart.name}»? Se perderán los CSV cargados en esta salida.`,
       variant: "danger",
       onConfirm: async () => {
         setDialogLoading(true);
         try {
-          await api.deletePart(event.id, test.id, part.id);
-          setPartByTest((prev) => ({ ...prev, [test.id]: null }));
+          await api.deletePart(event.id, freshTest.id, freshPart.id);
+          setPartByTest((prev) => ({ ...prev, [freshTest.id]: null }));
           await load();
         } catch (e) {
           setError(e instanceof Error ? e.message : "Error al eliminar salida");

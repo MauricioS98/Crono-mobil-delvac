@@ -262,7 +262,7 @@ router.delete("/events/:id/tests/:testId/parts/:partId", (req, res) => {
   if (!test) return res.status(404).json({ error: "Prueba no encontrada" });
   const part = getPart(test, req.params.partId);
   if (!part) return res.status(404).json({ error: "Parte no encontrada" });
-  const block = assertCanDeletePart(test);
+  const block = assertCanDeletePart(event, test, part);
   if (block) return res.status(409).json({ error: block });
   test.parts = test.parts.filter((p) => p.id !== req.params.partId);
   saveEvent(event);
