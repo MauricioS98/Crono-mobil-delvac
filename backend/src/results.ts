@@ -1,6 +1,6 @@
-import { findPilotByNumber, normalizeNumber } from "./storage.js";
+import { normalizeNumber } from "./storage.js";
 import { formatMs } from "./timeUtils.js";
-import type { Event, ParsedCsv, ResultRow, Test, TestPart, TimingPoint } from "./types.js";
+import type { Event, ParsedCsv, Pilot, ResultRow, Test, TestPart, TimingPoint } from "./types.js";
 
 function pickName(a: string, b?: string): string {
   return a || b || "";
@@ -38,8 +38,15 @@ function correctedTime(rawMs: number, point: TimingPoint | undefined): number {
   return rawMs - (point?.offsetMs ?? 0);
 }
 
-function enrich(number: string, name: string, timeMs: number, segmentLabel: string, part?: TestPart): ResultRow {
-  const pilot = findPilotByNumber(number);
+function enrich(
+  pilots: Pilot[],
+  number: string,
+  name: string,
+  timeMs: number,
+  segmentLabel: string,
+  part?: TestPart
+): ResultRow {
+  const pilot = pilots.find((p) => normalizeNumber(p.number) === normalizeNumber(number));
   return {
     position: 0,
     number,
@@ -74,13 +81,15 @@ export function computePartResults(
 ): ResultsComputation {
   const points = [...event.timingPoints].sort((a, b) => a.order - b.order);
 
+  const pilots = event.pilots || [];
+
   if (part.combinedMode) {
     const slot = part.csvs[0];
     if (!slot) return { rows: [], warning: "No hay CSV cargado en esta parte." };
     const byPilot = firstLapPassageByPilot(slot.parsed);
     const rows: ResultRow[] = [];
     for (const [, p] of byPilot) {
-      rows.push(enrich(p.number, p.name, p.lap, "CSV combinado (Tiempo de vuelta)", part));
+      rows.push(enrich(pilots, p.number, p.name, p.lap, "CSV combinado (Tiempo de vuelta)", part));
     }
     if (rows.length === 0) {
       return {
@@ -143,6 +152,7 @@ export function computePartResults(
     }
     rows.push(
       enrich(
+        pilots,
         from.number,
         pickName(from.name, to.name),
         delta,

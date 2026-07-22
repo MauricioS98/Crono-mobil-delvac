@@ -6,15 +6,11 @@ import type { Event, Pilot } from "./types.js";
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 export const DATA_ROOT = path.resolve(__dirname, "../../data");
 export const EVENTS_DIR = path.join(DATA_ROOT, "events");
-export const PILOTS_FILE = path.join(DATA_ROOT, "pilots", "pilots.json");
 export const HEADERS_DIR = path.join(DATA_ROOT, "uploads", "headers");
 
 function ensureDirs() {
-  for (const dir of [EVENTS_DIR, path.dirname(PILOTS_FILE), HEADERS_DIR]) {
+  for (const dir of [EVENTS_DIR, HEADERS_DIR]) {
     if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
-  }
-  if (!fs.existsSync(PILOTS_FILE)) {
-    fs.writeFileSync(PILOTS_FILE, "[]", "utf-8");
   }
 }
 
@@ -30,8 +26,8 @@ export function listEvents(): Event[] {
   ensureDirs();
   const files = fs.readdirSync(EVENTS_DIR).filter((f) => f.endsWith(".json"));
   const events = files.map((f) => {
-    const raw = fs.readFileSync(path.join(EVENTS_DIR, f), "utf-8");
-    return JSON.parse(raw) as Event;
+    const id = f.replace(/\.json$/, "");
+    return getEvent(id)!;
   });
   return events.sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
 }
@@ -40,6 +36,7 @@ export function getEvent(id: string): Event | null {
   const file = path.join(EVENTS_DIR, `${id}.json`);
   if (!fs.existsSync(file)) return null;
   const event = JSON.parse(fs.readFileSync(file, "utf-8")) as Event;
+  event.pilots = event.pilots || [];
   event.tests = (event.tests || []).map((t) => ({
     ...t,
     description: t.description ?? "",
@@ -50,6 +47,7 @@ export function getEvent(id: string): Event | null {
 
 export function saveEvent(event: Event): Event {
   ensureDirs();
+  if (!event.pilots) event.pilots = [];
   event.updatedAt = new Date().toISOString();
   writeJsonAtomic(path.join(EVENTS_DIR, `${event.id}.json`), event);
   return event;
@@ -67,20 +65,9 @@ export function deleteEvent(id: string): boolean {
   return true;
 }
 
-export function getPilots(): Pilot[] {
-  ensureDirs();
-  return JSON.parse(fs.readFileSync(PILOTS_FILE, "utf-8")) as Pilot[];
-}
-
-export function savePilots(pilots: Pilot[]): Pilot[] {
-  ensureDirs();
-  writeJsonAtomic(PILOTS_FILE, pilots);
-  return pilots;
-}
-
-export function findPilotByNumber(number: string): Pilot | undefined {
+export function findPilotByNumber(pilots: Pilot[], number: string): Pilot | undefined {
   const normalized = normalizeNumber(number);
-  return getPilots().find((p) => normalizeNumber(p.number) === normalized);
+  return pilots.find((p) => normalizeNumber(p.number) === normalized);
 }
 
 export function normalizeNumber(n: string): string {

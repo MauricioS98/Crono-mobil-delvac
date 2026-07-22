@@ -6,11 +6,9 @@ import { v4 as uuid } from "uuid";
 import {
   deleteEvent,
   getEvent,
-  getPilots,
   HEADERS_DIR,
   listEvents,
   saveEvent,
-  savePilots,
 } from "./storage.js";
 import type { Event, Pilot, Test, TestPart, TimingPoint } from "./types.js";
 import { parseOffsetToMs, formatOffset } from "./timeUtils.js";
@@ -35,6 +33,7 @@ function emptyEvent(body: Partial<Event>): Event {
       { id: uuid(), name: "PC A", offsetMs: 0, order: 0 },
       { id: uuid(), name: "PC B", offsetMs: 0, order: 1 },
     ],
+    pilots: [],
     tests: [],
     createdAt: now,
     updatedAt: now,
@@ -346,23 +345,27 @@ router.get("/events/:id/tests/:testId/export/:format", async (req, res) => {
   }
 });
 
-// ─── Pilots ───────────────────────────────────────────────
-router.get("/pilots", (_req, res) => {
-  res.json(getPilots());
+// ─── Event pilots ─────────────────────────────────────────
+router.get("/events/:id/pilots", (req, res) => {
+  const event = getEvent(req.params.id);
+  if (!event) return res.status(404).json({ error: "Evento no encontrado" });
+  res.json(event.pilots);
 });
 
-router.post("/pilots/import/preview", upload.single("file"), (req, res) => {
+router.post("/events/:id/pilots/import/preview", upload.single("file"), (req, res) => {
+  if (!getEvent(req.params.id)) return res.status(404).json({ error: "Evento no encontrado" });
   if (!req.file) return res.status(400).json({ error: "Archivo CSV requerido" });
   try {
     const content = req.file.buffer.toString("utf-8");
-    const preview = previewPilotsCsv(content, req.file.originalname);
-    res.json(preview);
+    res.json(previewPilotsCsv(content, req.file.originalname));
   } catch (err) {
     res.status(400).json({ error: err instanceof Error ? err.message : "Error al leer CSV" });
   }
 });
 
-router.post("/pilots/import", upload.single("file"), (req, res) => {
+router.post("/events/:id/pilots/import", upload.single("file"), (req, res) => {
+  const event = getEvent(req.params.id);
+  if (!event) return res.status(404).json({ error: "Evento no encontrado" });
   if (!req.file) return res.status(400).json({ error: "Archivo CSV requerido" });
   try {
     const content = req.file.buffer.toString("utf-8");
@@ -373,8 +376,9 @@ router.post("/pilots/import", upload.single("file"), (req, res) => {
       mapping = previewPilotsCsv(content).suggestedMapping;
     }
     const skipFirstRow = req.body.skipFirstRow !== "false" && req.body.skipFirstRow !== false;
-    const result = importPilotsFromCsv(content, getPilots(), mapping, { skipFirstRow });
-    savePilots(result.pilots);
+    const result = importPilotsFromCsv(content, event.pilots || [], mapping, { skipFirstRow });
+    event.pilots = result.pilots;
+    saveEvent(event);
     res.json({
       pilots: result.pilots,
       summary: {
@@ -390,21 +394,9 @@ router.post("/pilots/import", upload.single("file"), (req, res) => {
   }
 });
 
-router.put("/pilots", (req, res) => {
-  const pilots = (req.body as Pilot[]).map((p) => ({
-    id: p.id || uuid(),
-    number: p.number,
-    name: p.name,
-    category: p.category || "",
-    league: p.league || "",
-    notes: p.notes || "",
-  }));
-  savePilots(pilots);
-  res.json(pilots);
-});
-
-router.post("/pilots", (req, res) => {
-  const pilots = getPilots();
+router.post("/events/:id/pilots", (req, res) => {
+  const event = getEvent(req.params.id);
+  if (!event) return res.status(404).json({ error: "Evento no encontrado" });
   const pilot: Pilot = {
     id: uuid(),
     number: req.body.number || "",
@@ -413,23 +405,27 @@ router.post("/pilots", (req, res) => {
     league: req.body.league || "",
     notes: req.body.notes || "",
   };
-  pilots.push(pilot);
-  savePilots(pilots);
+  event.pilots = event.pilots || [];
+  event.pilots.push(pilot);
+  saveEvent(event);
   res.status(201).json(pilot);
 });
 
-router.put("/pilots/:id", (req, res) => {
-  const pilots = getPilots();
-  const idx = pilots.findIndex((p) => p.id === req.params.id);
+router.put("/events/:id/pilots/:pilotId", (req, res) => {
+  const event = getEvent(req.params.id);
+  if (!event) return res.status(404).json({ error: "Evento no encontrado" });
+  const idx = (event.pilots || []).findIndex((p) => p.id === req.params.pilotId);
   if (idx < 0) return res.status(404).json({ error: "Piloto no encontrado" });
-  pilots[idx] = { ...pilots[idx], ...req.body, id: pilots[idx].id };
-  savePilots(pilots);
-  res.json(pilots[idx]);
+  event.pilots[idx] = { ...event.pilots[idx], ...req.body, id: event.pilots[idx].id };
+  saveEvent(event);
+  res.json(event.pilots[idx]);
 });
 
-router.delete("/pilots/:id", (req, res) => {
-  const pilots = getPilots().filter((p) => p.id !== req.params.id);
-  savePilots(pilots);
+router.delete("/events/:id/pilots/:pilotId", (req, res) => {
+  const event = getEvent(req.params.id);
+  if (!event) return res.status(404).json({ error: "Evento no encontrado" });
+  event.pilots = (event.pilots || []).filter((p) => p.id !== req.params.pilotId);
+  saveEvent(event);
   res.json({ ok: true });
 });
 

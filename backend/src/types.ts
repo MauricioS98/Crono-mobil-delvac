@@ -83,6 +83,8 @@ export interface Event {
   headerImage: string | null;
   footerText: string;
   timingPoints: TimingPoint[];
+  /** Pilots registered for this event only */
+  pilots: Pilot[];
   tests: Test[];
   createdAt: string;
   updatedAt: string;

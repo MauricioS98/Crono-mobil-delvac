@@ -567,5 +567,271 @@
     }
   ],
   "createdAt": "2026-07-21T23:15:14.087Z",
-  "updatedAt": "2026-07-21T23:49:31.274Z"
+  "updatedAt": "2026-07-22T00:33:29.387Z",
+  "pilots": [
+    {
+      "id": "a7f13157-9a69-4c92-a2a3-29d59c386e53",
+      "number": "39-E",
+      "name": "Julian David CONCHA VALENCIA",
+      "category": "115 cc Inicio",
+      "league": "Cauca",
+      "notes": "Club: CLUB CORONA CLUB XTREME PARK · Moto: Yamaha · Doc: 1061777890"
+    },
+    {
+      "id": "3988e010-2dc7-4135-b0fe-7f5fbd039d2b",
+      "number": "77",
+      "name": "David Estevan Calvache González",
+      "category": "115 cc Inicio",
+      "league": "Nariño",
+      "notes": "Club: CLUB JOSMARC MOTOS RACING · Moto: Yamaha · Doc: 1061689502"
+    },
+    {
+      "id": "742b601e-7909-4383-b8dc-cbd865c0b382",
+      "number": "114",
+      "name": "GIOVANY ANDRES ARTEAGA MONCAYO",
+      "category": "115 cc Inicio",
+      "league": "Nariño",
+      "notes": "Club: MOTOCLUB GUAITARILLA RACING TEAM · Moto: Yamaha · Doc: 1081592633"
+    },
+    {
+      "id": "1cae0817-c8da-4f6c-bad5-7175e23e5727",
+      "number": "150",
+      "name": "JUAN FERNANDO CORTES LORA",
+      "category": "115 cc Inicio",
+      "league": "Quindío",
+      "notes": "Club: CLUB MONSTER GARAGE · Moto: Yamaha · Doc: 1094959397"
+    },
+    {
+      "id": "fc5983f5-7b0b-4004-acce-9307e5016606",
+      "number": "152-E",
+      "name": "Juan Manuel Holguín",
+      "category": "115 cc Inicio",
+      "league": "Cauca",
+      "notes": "Club: CLUB CORONA CLUB XTREME PARK · Moto: Yamaha · Doc: 1193034851"
+    },
+    {
+      "id": "e23b6cdc-d736-48bd-89a4-81f7ab27d8d2",
+      "number": "206-E",
+      "name": "Juan Sebastián Satizabal",
+      "category": "115 cc Inicio",
+      "league": "Cauca",
+      "notes": "Club: CLUB CORONA CLUB XTREME PARK · Moto: Yamaha · Doc: 1061807303"
+    },
+    {
+      "id": "8f9e17ff-cf9f-476a-87bd-3801dc6af2de",
+      "number": "222-E",
+      "name": "Juan Carlos Albán",
+      "category": "115 cc Inicio",
+      "league": "Cauca",
+      "notes": "Club: CLUB CORONA CLUB XTREME PARK · Moto: Yamaha · Doc: 1061727242"
+    },
+    {
+      "id": "aa03012b-324d-41d1-a6f6-a2424537cc1d",
+      "number": "239",
+      "name": "Esteban DORADO SOLARTE",
+      "category": "115 cc Inicio",
+      "league": "Cauca",
+      "notes": "Club: CLUB CORONA CLUB XTREME PARK · Moto: Yamaha · Doc: 1029602513"
+    },
+    {
+      "id": "14bf825f-d9b3-42b1-a2bc-d48bf8224eaf",
+      "number": "242",
+      "name": "Benjamín Mayoral Toledo",
+      "category": "115 cc Inicio",
+      "league": "Putumayo",
+      "notes": "Club: TEAM RACING MOCOA · Moto: Yamaha · Doc: 1124316092"
+    },
+    {
+      "id": "65d7a1fd-2ea2-4ff0-be75-0a07d1778122",
+      "number": "255",
+      "name": "Juan Sebastian WONG RODRÍGUEZ",
+      "category": "115 cc Infantil",
+      "league": "Quindío",
+      "notes": "Club: CLUB MONSTER GARAGE · Moto: Yamaha"
+    },
+    {
+      "id": "2cd923c3-491b-4891-9ffc-1b7a5fde6a10",
+      "number": "258",
+      "name": "EDWIN ALEXIS SANCHEZ MORA",
+      "category": "115 cc Inicio",
+      "league": "Cauca",
+      "notes": "Club: CLUB CORONA CLUB XTREME PARK · Moto: Yamaha · Doc: 1059913138"
+    },
+    {
+      "id": "3fac865a-f887-4817-9415-ee06ae81755f",
+      "number": "312",
+      "name": "Eder Sebastian JARAMILLO YARA",
+      "category": "115 cc Infantil",
+      "league": "Tolima",
+      "notes": "Club: CLUB PISTON RACING · Moto: Yamaha"
+    },
+    {
+      "id": "4143faf1-1355-4161-88b4-d5ca8f4f656a",
+      "number": "346-E",
+      "name": "Andrés Sebastián forero Parra",
+      "category": "115 cc Inicio",
+      "league": "Cauca",
+      "notes": "Club: CLUB CORONA CLUB XTREME PARK · Moto: Yamaha · Doc: 1004842705"
+    },
+    {
+      "id": "b12dd009-31e5-4d5f-991c-f6953f0e077f",
+      "number": "388",
+      "name": "Daniel Esteban López Vallejos",
+      "category": "115 cc Inicio",
+      "league": "Nariño",
+      "notes": "Club: MOTOCLUB PROVIDENCIA · Moto: Yamaha · Doc: 1081272482"
+    },
+    {
+      "id": "a10ea3f7-159a-46e1-926d-c32ca46538f9",
+      "number": "428",
+      "name": "DANIEL QUINTANA CASTRO",
+      "category": "115 cc Inicio",
+      "league": "Quindío",
+      "notes": "Club: CLUB RUTEROS DEL QUINDIO · Moto: Yamaha · Doc: 1112793783"
+    },
+    {
+      "id": "4a240980-f276-48ff-8ea6-60bca9e0b5a2",
+      "number": "430",
+      "name": "JOLMAN JHAN CARLOS RUIZ ENRIQUEZ",
+      "category": "115 cc Inicio",
+      "league": "Cauca",
+      "notes": "Club: CLUB CORONA CLUB XTREME PARK · Moto: Yamaha · Doc: 1143971097"
+    },
+    {
+      "id": "6632f72b-b345-4ad0-a2f8-7c9d4d1b1b2d",
+      "number": "450",
+      "name": "Derian Andres ROZO CASTIBLANCO",
+      "category": "115 cc Infantil",
+      "league": "Cundinamarca",
+      "notes": "Club: LISTO PILOTO · Moto: Yamaha"
+    },
+    {
+      "id": "54ca7728-a612-4413-b81f-b3269a03161e",
+      "number": "515-E",
+      "name": "David LOPERA ARROYAVE",
+      "category": "115 cc Inicio",
+      "league": "Cauca",
+      "notes": "Club: CLUB CORONA CLUB XTREME PARK · Moto: Yamaha · Doc: 1017167733"
+    },
+    {
+      "id": "941e3467-dcca-430f-9008-63cb08a7817f",
+      "number": "524",
+      "name": "Jhon Edwar BALLESTEROS CARDONA",
+      "category": "115 cc Inicio",
+      "league": "Quindío",
+      "notes": "Club: CLUB DISCOVER QUINDIO · Moto: Yamaha · Doc: 1087493498"
+    },
+    {
+      "id": "bcee0f93-bc9f-4700-b5f9-9c8d83d03e56",
+      "number": "604",
+      "name": "Samuel VARGAS OME",
+      "category": "115 cc Infantil",
+      "league": "Nariño",
+      "notes": "Club: MOTOCLUB GUAITARILLA RACING TEAM · Moto: Yamaha"
+    },
+    {
+      "id": "21f19d88-9d6c-4e47-86a2-6502daf0386f",
+      "number": "641",
+      "name": "DAVID SEBASTIAN MENA ORDOÑEZ",
+      "category": "115 cc Inicio",
+      "league": "Putumayo",
+      "notes": "Club: TEAM RACING MOCOA · Moto: Yamaha · Doc: 1006947108"
+    },
+    {
+      "id": "70da1d82-edf1-4f45-9731-91b77c7a5412",
+      "number": "696-E",
+      "name": "Jhon Deiby Escobar",
+      "category": "115 cc Inicio",
+      "league": "Cauca",
+      "notes": "Club: CLUB CORONA CLUB XTREME PARK · Moto: Yamaha · Doc: 1113152152"
+    },
+    {
+      "id": "7f7778ec-c139-4d6b-8149-50774c414323",
+      "number": "724",
+      "name": "David Andres RAMIREZ",
+      "category": "115 cc Inicio",
+      "league": "Quindío",
+      "notes": "Club: CLUB MONSTER GARAGE · Moto: Yamaha · Doc: 1088295535"
+    },
+    {
+      "id": "425b3c0b-7e0c-4768-9754-5f8324cc237a",
+      "number": "729",
+      "name": "Oscar Javier IBARRA ROJAS",
+      "category": "115 cc Inicio",
+      "league": "Huila",
+      "notes": "Club: CLUB MOTO JAPONESA · Moto: Yamaha · Doc: 1083864269"
+    },
+    {
+      "id": "c0c3334a-505d-4a06-93d6-c191545ea16b",
+      "number": "732",
+      "name": "FREDDY SANTIAGO MAYA OTAYA",
+      "category": "115 cc Inicio",
+      "league": "Nariño",
+      "notes": "Club: CLUB DEPORTIVO BUFALO XTREM · Moto: Yamaha · Doc: 1004135129"
+    },
+    {
+      "id": "b5f9db28-fb35-472f-b204-d04fc3413772",
+      "number": "737",
+      "name": "Juan Jose AMAYA VAHOS",
+      "category": "115 cc Infantil",
+      "league": "Huila",
+      "notes": "Club: CLUB MOTO JAPONESA · Moto: Yamaha"
+    },
+    {
+      "id": "73b42539-b7e8-409c-9e35-998ee6ea8b56",
+      "number": "764-E",
+      "name": "Wilson villaquiran hidago",
+      "category": "115 cc Inicio",
+      "league": "Cauca",
+      "notes": "Club: CLUB CORONA CLUB XTREME PARK · Moto: Yamaha · Doc: 1061700993"
+    },
+    {
+      "id": "f1e548be-ff4d-47ef-86bb-05557d50c98f",
+      "number": "803-E",
+      "name": "Marco Gutiérrez Chávez",
+      "category": "115 cc Inicio",
+      "league": "Cauca",
+      "notes": "Club: CLUB CORONA CLUB XTREME PARK · Moto: Yamaha · Doc: 1061792504"
+    },
+    {
+      "id": "7e9adc8a-ae0b-4335-bb97-1a80bc8cb5f0",
+      "number": "825-E",
+      "name": "Luis Miguel Dorado",
+      "category": "115 cc Inicio",
+      "league": "Cauca",
+      "notes": "Club: CLUB CORONA CLUB XTREME PARK · Moto: Yamaha · Doc: 1061804016"
+    },
+    {
+      "id": "c583c940-0fa1-481d-8c01-0f6dfd7e85bd",
+      "number": "865",
+      "name": "KEVIN ANDRES RODRIGUEZ HIGUITA",
+      "category": "115 cc Inicio",
+      "league": "Quindío",
+      "notes": "Club: CLUB MONSTER GARAGE · Moto: Yamaha · Doc: 1004915411"
+    },
+    {
+      "id": "6abe38c0-a142-46bc-becd-130e53057f32",
+      "number": "910-E",
+      "name": "GERMAN ANDRES ARCOS VITERI",
+      "category": "115 cc Inicio",
+      "league": "Nariño",
+      "notes": "Club: CLUB DEPORTIVO LOS CAFETEROS · Moto: Yamaha · Doc: 1088156996"
+    },
+    {
+      "id": "3db58001-d03f-4246-9ea5-334bf2d04568",
+      "number": "914",
+      "name": "Santiago Andres Guerra Ramos",
+      "category": "115 cc Inicio",
+      "league": "Nariño",
+      "notes": "Club: CLUB JOSMARC MOTOS RACING · Moto: Yamaha · Doc: 1085335948"
+    },
+    {
+      "id": "dbffb25b-7890-4efc-92a0-564e38c577cf",
+      "number": "963",
+      "name": "Jhojan CHAUX CIFUENTES",
+      "category": "115 cc Inicio",
+      "league": "Cauca",
+      "notes": "Club: CLUB CORONA CLUB XTREME PARK · Moto: Yamaha · Doc: 1143865748"
+    }
+  ]
 }

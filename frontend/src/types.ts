@@ -70,6 +70,7 @@ export interface Event {
   headerImage: string | null;
   footerText: string;
   timingPoints: TimingPoint[];
+  pilots: Pilot[];
   tests: Test[];
   createdAt: string;
   updatedAt: string;

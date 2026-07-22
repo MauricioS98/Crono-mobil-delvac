@@ -28,7 +28,9 @@ Todo se guarda en `/data`:
 ## Flujo
 
 1. Crear **evento** y configurar **puntos de cronometraje** (PC A referencia, B/C/D con desfase `hh:mm:ss.xxx`)
-2. Registrar **pilotos** (N°, nombre, categoría, liga)
+2. Registrar **pilotos del evento** (manual o CSV con mapeo de columnas)
 3. Crear **pruebas** y **partes/salidas**
 4. Subir CSV por punto (o modo combinado si `Tiempo de vuelta ≠ 0`)
 5. Ver resultados parciales o unificados y exportar CSV / Excel / PDF
+
+Los pilotos viven dentro de cada evento (`data/events/{id}.json`), no en una base global.

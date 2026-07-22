@@ -1,7 +1,6 @@
 import { NavLink, Route, Routes } from "react-router-dom";
 import { EventsPage } from "./pages/EventsPage";
 import { EventDetailPage } from "./pages/EventDetailPage";
-import { PilotsPage } from "./pages/PilotsPage";
 
 export default function App() {
   return (
@@ -15,14 +14,12 @@ export default function App() {
           <NavLink to="/" end>
             Eventos
           </NavLink>
-          <NavLink to="/pilotos">Pilotos</NavLink>
         </nav>
       </header>
       <main className="main">
         <Routes>
           <Route path="/" element={<EventsPage />} />
           <Route path="/eventos/:id" element={<EventDetailPage />} />
-          <Route path="/pilotos" element={<PilotsPage />} />
         </Routes>
       </main>
     </div>

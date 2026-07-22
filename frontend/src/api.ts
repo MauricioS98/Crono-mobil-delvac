@@ -116,8 +116,8 @@ export const api = {
     return `${BASE}/events/${eventId}/tests/${testId}/export/${format}?${q}`;
   },
 
-  listPilots: () => request<Pilot[]>("/pilots"),
-  previewPilotsImport: async (file: File) => {
+  listPilots: (eventId: string) => request<Pilot[]>(`/events/${eventId}/pilots`),
+  previewPilotsImport: async (eventId: string, file: File) => {
     const fd = new FormData();
     fd.append("file", file);
     return request<{
@@ -127,9 +127,10 @@ export const api = {
       sampleRows: string[][];
       suggestedMapping: Record<string, number>;
       totalDataRows: number;
-    }>("/pilots/import/preview", { method: "POST", body: fd });
+    }>(`/events/${eventId}/pilots/import/preview`, { method: "POST", body: fd });
   },
   importPilots: async (
+    eventId: string,
     file: File,
     mapping: Record<string, number | undefined>,
     skipFirstRow = true
@@ -141,27 +142,22 @@ export const api = {
     return request<{
       pilots: Pilot[];
       summary: { total: number; added: number; updated: number; skipped: number; filename: string };
-    }>("/pilots/import", { method: "POST", body: fd });
+    }>(`/events/${eventId}/pilots/import`, { method: "POST", body: fd });
   },
-  createPilot: (data: Partial<Pilot>) =>
-    request<Pilot>("/pilots", {
+  createPilot: (eventId: string, data: Partial<Pilot>) =>
+    request<Pilot>(`/events/${eventId}/pilots`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(data),
     }),
-  updatePilot: (id: string, data: Partial<Pilot>) =>
-    request<Pilot>(`/pilots/${id}`, {
+  updatePilot: (eventId: string, pilotId: string, data: Partial<Pilot>) =>
+    request<Pilot>(`/events/${eventId}/pilots/${pilotId}`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(data),
     }),
-  deletePilot: (id: string) => request(`/pilots/${id}`, { method: "DELETE" }),
-  saveAllPilots: (pilots: Pilot[]) =>
-    request<Pilot[]>("/pilots", {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(pilots),
-    }),
+  deletePilot: (eventId: string, pilotId: string) =>
+    request(`/events/${eventId}/pilots/${pilotId}`, { method: "DELETE" }),
 };
 
 export function formatOffsetInput(ms: number): string {
