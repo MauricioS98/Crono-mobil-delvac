@@ -210,96 +210,117 @@ export function EventDetailPage() {
       {error && <div className="alert alert-error" style={{ marginBottom: "1rem" }}>{error}</div>}
       {msg && <div className="alert" style={{ marginBottom: "1rem" }}>{msg}</div>}
 
-      <div className="grid grid-2">
-        <form className="card form" onSubmit={saveMeta}>
-          <h3>Datos del evento</h3>
+      <div className="setup-layout">
+        <form className="setup-panel form" onSubmit={saveMeta}>
+          <header className="setup-panel-head">
+            <h3>Datos del evento</h3>
+            <p>Identidad del evento e imagen para exportaciones PDF.</p>
+          </header>
+
           <div className="field">
             <label>Nombre</label>
             <input name="name" defaultValue={event.name} required />
           </div>
-          <div className="field">
-            <label>Fecha</label>
-            <input name="date" type="date" defaultValue={event.date} />
-          </div>
-          <div className="field">
-            <label>Lugar</label>
-            <input name="location" defaultValue={event.location} />
+          <div className="setup-inline-2">
+            <div className="field">
+              <label>Fecha</label>
+              <input name="date" type="date" defaultValue={event.date} />
+            </div>
+            <div className="field">
+              <label>Lugar</label>
+              <input name="location" defaultValue={event.location} />
+            </div>
           </div>
           <div className="field">
             <label>Texto pie de página (PDF)</label>
             <input name="footerText" defaultValue={event.footerText} />
           </div>
+
           <div className="field">
-            <label>Imagen de cabecera (todo el evento)</label>
-            <input
-              type="file"
-              accept="image/*"
-              onChange={(e) => onHeader(e.target.files?.[0] || null)}
-            />
-            {event.headerImage && (
-              <img
-                className="header-preview"
-                src={`/uploads/headers/${event.headerImage}?t=${event.updatedAt}`}
-                alt="Cabecera"
+            <label>Imagen de cabecera</label>
+            <label className="header-upload">
+              <span className="header-upload-btn">Seleccionar imagen</span>
+              <span className="muted">PNG, JPG o WebP · se usa en todo el evento</span>
+              <input
+                type="file"
+                accept="image/*"
+                onChange={(e) => onHeader(e.target.files?.[0] || null)}
               />
+            </label>
+            {event.headerImage && (
+              <div className="header-preview-wrap">
+                <img
+                  className="header-preview"
+                  src={`/uploads/headers/${event.headerImage}?t=${event.updatedAt}`}
+                  alt="Cabecera"
+                />
+              </div>
             )}
           </div>
+
           <button className="btn btn-primary">Guardar datos</button>
         </form>
 
-        <div className="card stack">
-          <div className="section-head" style={{ marginBottom: 0 }}>
-            <h3 style={{ margin: 0, fontFamily: "var(--display)", textTransform: "uppercase" }}>
-              Puntos de cronometraje
-            </h3>
+        <div className="setup-panel">
+          <header className="setup-panel-head">
+            <div>
+              <h3>Puntos de cronometraje</h3>
+              <p>
+                PC A es la referencia (desfase 0). Los demás van relativos a A · formato{" "}
+                <code>hh:mm:ss.xxx</code>
+              </p>
+            </div>
             <button className="btn btn-secondary btn-sm" type="button" onClick={addPoint}>
               + Punto
             </button>
+          </header>
+
+          <div className="timing-list">
+            {points.map((p, i) => (
+              <div key={p.id} className={`timing-card ${i === 0 ? "is-ref" : ""}`}>
+                <div className="timing-card-badge">{i === 0 ? "Ref" : String.fromCharCode(65 + i)}</div>
+                <div className="timing-point-row">
+                  <div className="field">
+                    <label>Nombre</label>
+                    <input
+                      value={p.name}
+                      onChange={(e) => {
+                        const name = e.target.value;
+                        setEvent({
+                          ...event,
+                          timingPoints: event.timingPoints.map((tp) =>
+                            tp.id === p.id ? { ...tp, name } : tp
+                          ),
+                        });
+                      }}
+                    />
+                  </div>
+                  <div className="field">
+                    <label>Desfase</label>
+                    <input
+                      value={i === 0 ? "00:00:00.000" : offsetDrafts[p.id] || "00:00:00.000"}
+                      disabled={i === 0}
+                      onChange={(e) => setOffsetDrafts({ ...offsetDrafts, [p.id]: e.target.value })}
+                      placeholder="00:02:36.245"
+                    />
+                  </div>
+                  {i > 0 ? (
+                    <button
+                      className="btn btn-danger btn-sm row-action"
+                      type="button"
+                      onClick={() => removePoint(p.id)}
+                      aria-label={`Eliminar ${p.name}`}
+                    >
+                      ×
+                    </button>
+                  ) : (
+                    <span className="row-action-spacer" aria-hidden="true" />
+                  )}
+                </div>
+              </div>
+            ))}
           </div>
-          <p className="muted">
-            El primer punto es la referencia (desfase 0). Los demás desfases son relativos a PC A,
-            formato <code>hh:mm:ss.xxx</code> (también acepta <code>hh:mm:ss:xxx</code>).
-          </p>
-          {points.map((p, i) => (
-            <div key={p.id} className="timing-point-row">
-              <div className="field">
-                <label>Nombre</label>
-                <input
-                  value={p.name}
-                  onChange={(e) => {
-                    const name = e.target.value;
-                    setEvent({
-                      ...event,
-                      timingPoints: event.timingPoints.map((tp) =>
-                        tp.id === p.id ? { ...tp, name } : tp
-                      ),
-                    });
-                  }}
-                />
-              </div>
-              <div className="field">
-                <label>Desfase</label>
-                <input
-                  value={i === 0 ? "00:00:00.000" : offsetDrafts[p.id] || "00:00:00.000"}
-                  disabled={i === 0}
-                  onChange={(e) => setOffsetDrafts({ ...offsetDrafts, [p.id]: e.target.value })}
-                  placeholder="00:02:36.245"
-                />
-              </div>
-              {i > 0 ? (
-                <button
-                  className="btn btn-danger btn-sm row-action"
-                  type="button"
-                  onClick={() => removePoint(p.id)}
-                  aria-label={`Eliminar ${p.name}`}
-                >
-                  ×
-                </button>
-              ) : (
-                <span className="row-action-spacer" aria-hidden="true" />
-              )}
-            </div>
-          ))}
+
           <button className="btn btn-primary" type="button" onClick={saveTimingPoints}>
             Guardar puntos y desfases
           </button>
