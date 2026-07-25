@@ -17,7 +17,6 @@ app.use(express.json({ limit: "10mb" }));
 
 
 
-const frontendPath = path.join(__dirname, "../../frontend/dist");
 
 console.log("Frontend path:", frontendPath);
 console.log("¿Existe dist?:", fs.existsSync(frontendPath));
