@@ -16,7 +16,7 @@ app.use(express.json({ limit: "10mb" }));
 
 
 
-
+const frontendPath = path.join(__dirname, "../../frontend/dist");
 
 console.log("Frontend path:", frontendPath);
 console.log("¿Existe dist?:", fs.existsSync(frontendPath));
@@ -36,7 +36,7 @@ app.get("/api/health", (_req, res) => {
 });
 
 // ---------- FRONTEND ----------
-const frontendPath = path.join(__dirname, "../../frontend/dist");
+//const frontendPath = path.join(__dirname, "../../frontend/dist");
 
 app.use(express.static(frontendPath));
 
