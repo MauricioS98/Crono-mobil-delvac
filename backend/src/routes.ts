@@ -84,6 +84,7 @@ function emptyEvent(body: Partial<Event> & { password?: string }): Event {
     tests: [],
     fusions: [],
     resultsBoard: [],
+    boardPageSeconds: 10,
     createdAt: now,
     updatedAt: now,
   };
@@ -140,6 +141,10 @@ router.put("/events/:id", (req, res) => {
     location: req.body.location ?? existing.location,
     footerText: req.body.footerText ?? existing.footerText,
     password: nextPassword,
+    boardPageSeconds:
+      req.body.boardPageSeconds != null
+        ? Math.min(120, Math.max(3, Math.round(Number(req.body.boardPageSeconds)) || 10))
+        : existing.boardPageSeconds ?? 10,
     themeColors:
       req.body.themeColors === undefined
         ? existing.themeColors ?? null
@@ -637,6 +642,7 @@ function boardEventMeta(event: Event) {
     headerImage: event.headerImage,
     footerText: event.footerText,
     themeColors: event.themeColors ?? null,
+    boardPageSeconds: event.boardPageSeconds ?? 10,
   };
 }
 
@@ -672,29 +678,38 @@ function feedRows(section: BoardSection) {
       time: r.totalTimeFormatted,
       timeMs: r.totalTimeMs,
       rawTime: "",
+      rawTimeMs: 0,
+      hasPenalty: false,
       penalty: "",
+      timePenaltyMs: 0,
+      positionPenalty: 0,
       comment: "",
       part: "",
       detail: r.byTest.map((t) => `${t.testName || t.testId}=${t.timeFormatted}`).join(" | "),
+      segments: [] as ResultRow["segments"],
     }));
   }
   return (section.rows as ResultRow[]).map((r) => ({
-      position: r.position,
-      number: r.number,
-      name: r.name || "",
-      category: r.category || "",
-      league: r.league || "",
-      laps:
+    position: r.position,
+    number: r.number,
+    name: r.name || "",
+    category: r.category || "",
+    league: r.league || "",
+    laps:
       r.laps == null ? "" : r.expectedLaps != null ? `${r.laps}/${r.expectedLaps}` : String(r.laps),
-      time: r.timeFormatted,
-      timeMs: r.timeMs,
-      rawTime: r.hasPenalty ? r.rawTimeFormatted : "",
-      penalty: r.timePenaltyMs > 0 ? formatOffset(r.timePenaltyMs) : "",
-      comment: r.comment || "",
-      part: r.partName || "",
-      detail: (r.segments || []).map((s) => `${s.from}→${s.to}=${s.timeFormatted}`).join(" | "),
-      segments: r.segments || [],
-    }));
+    time: r.timeFormatted,
+    timeMs: r.timeMs,
+    rawTime: r.rawTimeFormatted,
+    rawTimeMs: r.rawTimeMs,
+    hasPenalty: Boolean(r.hasPenalty),
+    penalty: r.timePenaltyMs > 0 ? formatOffset(r.timePenaltyMs) : "",
+    timePenaltyMs: r.timePenaltyMs || 0,
+    positionPenalty: r.positionPenalty || 0,
+    comment: r.comment || "",
+    part: r.partName || "",
+    detail: (r.segments || []).map((s) => `${s.from}→${s.to}=${s.timeFormatted}`).join(" | "),
+    segments: r.segments || [],
+  }));
 }
 
 function selectFeedSections(event: Event, sectionQuery: unknown): BoardSection[] {
@@ -728,6 +743,8 @@ router.get("/events/:id/board/feed.json", (req, res) => {
   res.json({
     event: boardEventMeta(event),
     generatedAt: new Date().toISOString(),
+    boardPageSeconds: event.boardPageSeconds ?? 10,
+    pageSize: 10,
     sections: sections.map((s, i) => ({
       id: s.entry.id,
       index: i + 1,
@@ -750,7 +767,7 @@ router.get("/events/:id/board/feed.csv", (req, res) => {
   };
   const header = [
     "Seccion", "Pos", "Numero", "Nombre", "Categoria", "Liga",
-    "Vueltas", "Tiempo", "TiempoSinPen", "Penalizacion", "Comentario", "Salida", "Detalle",
+    "Vueltas", "Tiempo", "TiempoSinPen", "Penalizacion", "PenPos", "Comentario", "Salida", "Detalle",
   ];
   const lines = [header.join(",")];
   for (const s of sections) {
@@ -758,7 +775,7 @@ router.get("/events/:id/board/feed.csv", (req, res) => {
       lines.push(
         [
           s.title, r.position, r.number, r.name, r.category, r.league,
-          r.laps, r.time, r.rawTime, r.penalty, r.comment, r.part, r.detail,
+          r.laps, r.time, r.rawTime, r.penalty, r.positionPenalty, r.comment, r.part, r.detail,
         ]
           .map(escCsv)
           .join(",")
@@ -784,7 +801,7 @@ router.get("/events/:id/board/feed.xml", (req, res) => {
     );
     for (const r of feedRows(s)) {
       parts.push(
-        `    <fila pos="${r.position}" numero="${xmlEsc(r.number)}" nombre="${xmlEsc(r.name)}" categoria="${xmlEsc(r.category)}" liga="${xmlEsc(r.league)}" vueltas="${xmlEsc(r.laps)}" tiempo="${xmlEsc(r.time)}" tiempoSinPen="${xmlEsc(r.rawTime)}" penalizacion="${xmlEsc(r.penalty)}" comentario="${xmlEsc(r.comment)}" salida="${xmlEsc(r.part)}" detalle="${xmlEsc(r.detail)}"/>`
+        `    <fila pos="${r.position}" numero="${xmlEsc(r.number)}" nombre="${xmlEsc(r.name)}" categoria="${xmlEsc(r.category)}" liga="${xmlEsc(r.league)}" vueltas="${xmlEsc(r.laps)}" tiempo="${xmlEsc(r.time)}" tiempoSinPen="${xmlEsc(r.rawTime)}" penalizacion="${xmlEsc(r.penalty)}" penPos="${xmlEsc(r.positionPenalty)}" comentario="${xmlEsc(r.comment)}" salida="${xmlEsc(r.part)}" detalle="${xmlEsc(r.detail)}"/>`
       );
     }
     parts.push("  </seccion>");

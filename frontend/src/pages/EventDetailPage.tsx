@@ -242,6 +242,10 @@ export function EventDetailPage() {
       date: String(fd.get("date") || ""),
       location: String(fd.get("location") || ""),
       footerText: String(fd.get("footerText") || ""),
+      boardPageSeconds: Math.min(
+        120,
+        Math.max(3, Math.round(Number(fd.get("boardPageSeconds")) || 10))
+      ),
       themeColors: isDefault ? null : themeColors,
     };
 
@@ -539,6 +543,21 @@ export function EventDetailPage() {
           <div className="field">
             <label>Texto pie de página (PDF)</label>
             <input name="footerText" defaultValue={event.footerText} />
+          </div>
+          <div className="field">
+            <label>Tablero público — cambio de página (segundos)</label>
+            <input
+              name="boardPageSeconds"
+              type="number"
+              min={3}
+              max={120}
+              step={1}
+              defaultValue={event.boardPageSeconds ?? 10}
+            />
+            <p className="muted" style={{ fontSize: "0.8rem", margin: 0 }}>
+              En el tablero se muestran 10 pilotos por página y rotan cada este intervalo. No afecta al
+              overlay.
+            </p>
           </div>
 
           <div className="field">

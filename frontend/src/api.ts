@@ -190,6 +190,7 @@ export const api = {
         location: string;
         headerImage: string | null;
         footerText: string;
+        boardPageSeconds?: number;
       };
       board: ResultsBoardEntry[];
       sections: {

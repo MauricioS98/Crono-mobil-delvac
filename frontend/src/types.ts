@@ -151,6 +151,8 @@ export interface Event {
   tests: Test[];
   fusions?: SavedFusion[];
   resultsBoard?: ResultsBoardEntry[];
+  /** Segundos entre cambios de página en el tablero público (10 pilotos/página) */
+  boardPageSeconds?: number;
   /** 4 colores del evento: [acento, resaltado, fondo paneles, texto]. null = paleta Minerva Timing */
   themeColors?: string[] | null;
   createdAt: string;

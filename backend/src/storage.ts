@@ -48,6 +48,17 @@ export function getEvent(id: string): Event | null {
   event.pilots = event.pilots || [];
   event.fusions = event.fusions || [];
   event.resultsBoard = event.resultsBoard || [];
+  if (
+    event.boardPageSeconds == null ||
+    !Number.isFinite(Number(event.boardPageSeconds))
+  ) {
+    event.boardPageSeconds = 10;
+  } else {
+    event.boardPageSeconds = Math.min(
+      120,
+      Math.max(3, Math.round(Number(event.boardPageSeconds)))
+    );
+  }
   event.tests = (event.tests || []).map((t) => ({
     ...t,
     description: t.description ?? "",

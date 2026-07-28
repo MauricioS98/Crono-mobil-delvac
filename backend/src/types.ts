@@ -199,6 +199,11 @@ export interface Event {
   fusions?: SavedFusion[];
   /** Public board: unified results + fusions in publish order */
   resultsBoard?: ResultsBoardEntry[];
+  /**
+   * Seconds between auto page changes on the public board (10 pilots per page).
+   * Default 10. Overlay is unaffected.
+   */
+  boardPageSeconds?: number;
   createdAt: string;
   updatedAt: string;
 }
