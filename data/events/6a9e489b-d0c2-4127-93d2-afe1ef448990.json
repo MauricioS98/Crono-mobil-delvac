@@ -16679,7 +16679,7 @@
   ],
   "fusions": [],
   "createdAt": "2026-07-24T15:01:53.665Z",
-  "updatedAt": "2026-07-27T20:59:20.559Z",
+  "updatedAt": "2026-07-28T18:34:06.153Z",
   "resultsBoard": [
     {
       "id": "0305b88b-1a61-4f6d-a3bf-0305ea583b1f",
@@ -16688,6 +16688,14 @@
       "title": "GPMD - Gran final — Resultado unificado",
       "publishedAt": "2026-07-26T22:41:43.417Z",
       "order": 0
+    },
+    {
+      "id": "7b718cc3-6f6b-4c95-b314-1c3303708f9b",
+      "kind": "unified",
+      "refId": "9a7f4d6c-da4e-4855-a5a5-975a60cd10eb",
+      "title": "GPMD - Prueba 3 — Resultado unificado",
+      "publishedAt": "2026-07-28T18:33:54.698Z",
+      "order": 1
     }
   ]
 }

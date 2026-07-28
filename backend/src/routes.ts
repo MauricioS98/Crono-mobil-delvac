@@ -10,7 +10,17 @@ import {
   listEvents,
   saveEvent,
 } from "./storage.js";
-import type { Event, Pilot, ResultsBoardEntry, Test, TestPart, TimingPoint } from "./types.js";
+import type {
+  Event,
+  FusionRow,
+  FusionTestMeta,
+  Pilot,
+  ResultRow,
+  ResultsBoardEntry,
+  Test,
+  TestPart,
+  TimingPoint,
+} from "./types.js";
 import { parseOffsetToMs, formatOffset } from "./timeUtils.js";
 import { parseTimingCsv } from "./csvParser.js";
 import {
@@ -493,12 +503,18 @@ router.delete("/events/:id/fusions/:fusionId", (req, res) => {
 });
 
 // ─── Public results board ─────────────────────────────────
-router.get("/events/:id/board", (req, res) => {
-  const event = getEvent(req.params.id);
-  if (!event) return res.status(404).json({ error: "Evento no encontrado" });
+type BoardSection = {
+  entry: ResultsBoardEntry;
+  kind: "unified" | "fusion";
+  title: string;
+  rows: ReturnType<typeof computeTestResults>["rows"] | FusionRow[];
+  warning: string | null;
+  tests: FusionTestMeta[] | null;
+};
 
+function buildBoardSections(event: Event): BoardSection[] {
   const board = [...(event.resultsBoard || [])].sort((a, b) => a.order - b.order);
-  const sections = [];
+  const sections: BoardSection[] = [];
 
   for (const entry of board) {
     if (entry.kind === "unified") {
@@ -508,7 +524,7 @@ router.get("/events/:id/board", (req, res) => {
       const { rows, warning } = computeTestResults(event, test, fromId, toId);
       sections.push({
         entry,
-        kind: "unified" as const,
+        kind: "unified",
         title: entry.title || `${test.name} — Resultado unificado`,
         rows: rows.filter((r) => !r.incomplete),
         warning: warning || null,
@@ -519,7 +535,7 @@ router.get("/events/:id/board", (req, res) => {
       if (!fusion) continue;
       sections.push({
         entry,
-        kind: "fusion" as const,
+        kind: "fusion",
         title: entry.title || fusion.name,
         rows: fusion.rows,
         warning: fusion.warning || null,
@@ -527,19 +543,171 @@ router.get("/events/:id/board", (req, res) => {
       });
     }
   }
+  return sections;
+}
+
+function boardEventMeta(event: Event) {
+  return {
+    id: event.id,
+    name: event.name,
+    date: event.date,
+    location: event.location,
+    headerImage: event.headerImage,
+    footerText: event.footerText,
+  };
+}
+
+router.get("/events/:id/board", (req, res) => {
+  const event = getEvent(req.params.id);
+  if (!event) return res.status(404).json({ error: "Evento no encontrado" });
+
+  const board = [...(event.resultsBoard || [])].sort((a, b) => a.order - b.order);
+  const sections = buildBoardSections(event);
 
   res.json({
-    event: {
-      id: event.id,
-      name: event.name,
-      date: event.date,
-      location: event.location,
-      headerImage: event.headerImage,
-      footerText: event.footerText,
-    },
+    event: boardEventMeta(event),
     board,
     sections,
   });
+});
+
+// ─── Public data feeds (broadcast: vMix, OBS, graphics systems) ───
+function isFusionRows(section: BoardSection): section is BoardSection & { rows: FusionRow[] } {
+  return section.kind === "fusion";
+}
+
+/** Flatten a board section into simple rows shared by all feed formats */
+function feedRows(section: BoardSection) {
+  if (isFusionRows(section)) {
+    return section.rows.map((r) => ({
+      position: r.position,
+      number: r.number,
+      name: r.name || "",
+      category: r.category || "",
+      league: r.league || "",
+      laps: "",
+      time: r.totalTimeFormatted,
+      timeMs: r.totalTimeMs,
+      rawTime: "",
+      penalty: "",
+      comment: "",
+      part: "",
+      detail: r.byTest.map((t) => `${t.testName || t.testId}=${t.timeFormatted}`).join(" | "),
+    }));
+  }
+  return (section.rows as ResultRow[]).map((r) => ({
+    position: r.position,
+    number: r.number,
+    name: r.name || "",
+    category: r.category || "",
+    league: r.league || "",
+    laps:
+      r.laps == null ? "" : r.expectedLaps != null ? `${r.laps}/${r.expectedLaps}` : String(r.laps),
+    time: r.timeFormatted,
+    timeMs: r.timeMs,
+    rawTime: r.hasPenalty ? r.rawTimeFormatted : "",
+    penalty: r.timePenaltyMs > 0 ? formatOffset(r.timePenaltyMs) : "",
+    comment: r.comment || "",
+    part: r.partName || "",
+    detail: "",
+  }));
+}
+
+function selectFeedSections(event: Event, sectionQuery: unknown): BoardSection[] {
+  const sections = buildBoardSections(event);
+  const wanted = String(sectionQuery || "").trim();
+  if (!wanted) return sections;
+  return sections.filter(
+    (s, i) => s.entry.id === wanted || String(i + 1) === wanted
+  );
+}
+
+function setFeedHeaders(res: import("express").Response, contentType: string) {
+  res.setHeader("Access-Control-Allow-Origin", "*");
+  res.setHeader("Cache-Control", "no-store");
+  res.setHeader("Content-Type", contentType);
+}
+
+function xmlEsc(v: string | number): string {
+  return String(v)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+}
+
+router.get("/events/:id/board/feed.json", (req, res) => {
+  const event = getEvent(req.params.id);
+  if (!event) return res.status(404).json({ error: "Evento no encontrado" });
+  const sections = selectFeedSections(event, req.query.section);
+  setFeedHeaders(res, "application/json; charset=utf-8");
+  res.json({
+    event: boardEventMeta(event),
+    generatedAt: new Date().toISOString(),
+    sections: sections.map((s, i) => ({
+      id: s.entry.id,
+      index: i + 1,
+      title: s.title,
+      kind: s.kind,
+      publishedAt: s.entry.publishedAt,
+      rows: feedRows(s),
+    })),
+  });
+});
+
+router.get("/events/:id/board/feed.csv", (req, res) => {
+  const event = getEvent(req.params.id);
+  if (!event) return res.status(404).json({ error: "Evento no encontrado" });
+  const sections = selectFeedSections(event, req.query.section);
+
+  const escCsv = (v: string | number) => {
+    const s = String(v);
+    return /[",;\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+  };
+  const header = [
+    "Seccion", "Pos", "Numero", "Nombre", "Categoria", "Liga",
+    "Vueltas", "Tiempo", "TiempoSinPen", "Penalizacion", "Comentario", "Salida", "Detalle",
+  ];
+  const lines = [header.join(",")];
+  for (const s of sections) {
+    for (const r of feedRows(s)) {
+      lines.push(
+        [
+          s.title, r.position, r.number, r.name, r.category, r.league,
+          r.laps, r.time, r.rawTime, r.penalty, r.comment, r.part, r.detail,
+        ]
+          .map(escCsv)
+          .join(",")
+      );
+    }
+  }
+  setFeedHeaders(res, "text/csv; charset=utf-8");
+  res.send("\uFEFF" + lines.join("\r\n"));
+});
+
+router.get("/events/:id/board/feed.xml", (req, res) => {
+  const event = getEvent(req.params.id);
+  if (!event) return res.status(404).json({ error: "Evento no encontrado" });
+  const sections = selectFeedSections(event, req.query.section);
+
+  const parts: string[] = ['<?xml version="1.0" encoding="UTF-8"?>'];
+  parts.push(
+    `<tablero evento="${xmlEsc(event.name)}" fecha="${xmlEsc(event.date || "")}" generado="${xmlEsc(new Date().toISOString())}">`
+  );
+  sections.forEach((s, i) => {
+    parts.push(
+      `  <seccion id="${xmlEsc(s.entry.id)}" indice="${i + 1}" titulo="${xmlEsc(s.title)}" tipo="${s.kind}">`
+    );
+    for (const r of feedRows(s)) {
+      parts.push(
+        `    <fila pos="${r.position}" numero="${xmlEsc(r.number)}" nombre="${xmlEsc(r.name)}" categoria="${xmlEsc(r.category)}" liga="${xmlEsc(r.league)}" vueltas="${xmlEsc(r.laps)}" tiempo="${xmlEsc(r.time)}" tiempoSinPen="${xmlEsc(r.rawTime)}" penalizacion="${xmlEsc(r.penalty)}" comentario="${xmlEsc(r.comment)}" salida="${xmlEsc(r.part)}" detalle="${xmlEsc(r.detail)}"/>`
+      );
+    }
+    parts.push("  </seccion>");
+  });
+  parts.push("</tablero>");
+  setFeedHeaders(res, "application/xml; charset=utf-8");
+  res.send(parts.join("\n"));
 });
 
 router.post("/events/:id/board", (req, res) => {

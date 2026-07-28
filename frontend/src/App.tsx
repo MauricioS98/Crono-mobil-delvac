@@ -2,10 +2,20 @@ import { NavLink, Route, Routes, useLocation } from "react-router-dom";
 import { EventsPage } from "./pages/EventsPage";
 import { EventDetailPage } from "./pages/EventDetailPage";
 import { PublicBoardPage } from "./pages/PublicBoardPage";
+import { OverlayPage } from "./pages/OverlayPage";
 
 export default function App() {
   const location = useLocation();
   const isBoard = location.pathname.startsWith("/tablero/");
+  const isOverlay = location.pathname.startsWith("/overlay/");
+
+  if (isOverlay) {
+    return (
+      <Routes>
+        <Route path="/overlay/:id" element={<OverlayPage />} />
+      </Routes>
+    );
+  }
 
   if (isBoard) {
     return (

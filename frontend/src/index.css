@@ -1883,3 +1883,264 @@ tr:hover td {
   font-size: 0.8rem;
 }
 
+/* ─── Exportación en tablero público ─────────────────────── */
+.board-section-actions {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  flex-wrap: wrap;
+}
+
+.board-export-label {
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-muted);
+}
+
+.board-export-btn {
+  display: inline-block;
+  padding: 0.25rem 0.6rem;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--bg-soft);
+  color: var(--accent-hot);
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-decoration: none;
+  letter-spacing: 0.03em;
+}
+
+.board-export-btn:hover {
+  border-color: var(--accent);
+  background: rgba(196, 160, 53, 0.12);
+}
+
+/* ─── Panel de transmisión (feeds + overlay) ─────────────── */
+.board-broadcast {
+  max-width: 1100px;
+  margin: 2rem auto 0;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--bg-panel);
+  overflow: hidden;
+}
+
+.board-broadcast summary {
+  padding: 0.8rem 1rem;
+  cursor: pointer;
+  font-family: var(--display);
+  font-size: 1.05rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--accent-hot);
+}
+
+.board-broadcast-body {
+  padding: 0 1rem 1rem;
+  display: grid;
+  gap: 0.75rem;
+  font-size: 0.85rem;
+}
+
+.board-broadcast-body p {
+  margin: 0;
+  color: var(--text-muted);
+}
+
+.broadcast-url-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.broadcast-url-row strong {
+  min-width: 140px;
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.broadcast-url-row code {
+  flex: 1;
+  min-width: 240px;
+  padding: 0.35rem 0.55rem;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--bg);
+  color: var(--text);
+  font-size: 0.78rem;
+  overflow-wrap: anywhere;
+}
+
+/* ─── Overlay para transmisión (OBS / vMix) ──────────────── */
+html.overlay-transparent,
+body.overlay-transparent,
+.overlay-transparent #root {
+  background: transparent !important;
+}
+
+.overlay-root {
+  min-height: 100vh;
+  padding: 24px;
+  background: transparent;
+  font-family: var(--font);
+}
+
+.overlay-tower {
+  width: 460px;
+  max-width: calc(100vw - 48px);
+}
+
+.overlay-head {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 10px 14px;
+  border-radius: 8px 8px 0 0;
+  background: linear-gradient(180deg, rgba(20, 26, 22, 0.96), rgba(14, 20, 16, 0.96));
+  border-left: 4px solid var(--accent);
+}
+
+.overlay-head-event {
+  font-family: var(--display);
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--accent-hot);
+}
+
+.overlay-head-title {
+  font-family: var(--display);
+  font-size: 21px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: #ffffff;
+  line-height: 1.1;
+}
+
+.overlay-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-top: 2px;
+}
+
+.overlay-row {
+  display: grid;
+  grid-template-columns: 44px 48px 1fr auto;
+  align-items: center;
+  gap: 10px;
+  height: 48px;
+  padding: 0 12px 0 0;
+  background: rgba(14, 20, 16, 0.88);
+  border-left: 4px solid rgba(255, 255, 255, 0.25);
+}
+
+.overlay-row:last-child {
+  border-radius: 0 0 8px 0;
+}
+
+.overlay-p1 {
+  border-left-color: var(--accent-hot);
+  background: rgba(24, 30, 24, 0.94);
+}
+
+.overlay-p2 {
+  border-left-color: #c0c7d0;
+}
+
+.overlay-p3 {
+  border-left-color: #cd7f32;
+}
+
+.overlay-pos {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  font-family: var(--display);
+  font-size: 20px;
+  font-weight: 700;
+  color: #ffffff;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.overlay-p1 .overlay-pos {
+  color: #1a1405;
+  background: linear-gradient(180deg, var(--accent-hot), var(--accent));
+}
+
+.overlay-num {
+  font-family: var(--display);
+  font-size: 19px;
+  font-weight: 700;
+  color: var(--accent-hot);
+  text-align: center;
+}
+
+.overlay-driver {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 1px;
+  min-width: 0;
+}
+
+.overlay-name {
+  font-family: var(--display);
+  font-size: 19px;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  color: #ffffff;
+  line-height: 1.05;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.overlay-league {
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: rgba(232, 237, 234, 0.6);
+  line-height: 1.05;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.overlay-timing {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  justify-content: center;
+  gap: 1px;
+}
+
+.overlay-time {
+  font-variant-numeric: tabular-nums;
+  font-size: 17px;
+  font-weight: 600;
+  color: #e8edea;
+  line-height: 1.05;
+}
+
+.overlay-gap {
+  font-variant-numeric: tabular-nums;
+  font-size: 12px;
+  font-weight: 500;
+  color: rgba(232, 237, 234, 0.6);
+  line-height: 1.05;
+}
+
+.overlay-p1 .overlay-time {
+  color: var(--accent-hot);
+}
+

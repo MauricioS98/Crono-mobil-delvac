@@ -60,6 +60,7 @@ export function PublicBoardPage() {
 
   const { event, sections } = data;
   const headerUrl = event.headerImage ? `/uploads/headers/${event.headerImage}` : null;
+  const origin = window.location.origin;
 
   return (
     <div className="board-page">
@@ -94,6 +95,22 @@ export function PublicBoardPage() {
                   <p className="board-section-kind">
                     {section.kind === "fusion" ? "Fusión" : "Resultado unificado"}
                   </p>
+                </div>
+                <div className="board-section-actions">
+                  <span className="board-export-label">Descargar</span>
+                  {(["pdf", "csv", "xlsx"] as const).map((fmt) => (
+                    <a
+                      key={fmt}
+                      className="board-export-btn"
+                      href={
+                        section.kind === "fusion"
+                          ? `/api/events/${event.id}/fusions/${section.entry.refId}/export/${fmt}`
+                          : `/api/events/${event.id}/tests/${section.entry.refId}/export/${fmt}`
+                      }
+                    >
+                      {fmt === "xlsx" ? "Excel" : fmt.toUpperCase()}
+                    </a>
+                  ))}
                 </div>
               </header>
 
@@ -196,6 +213,40 @@ export function PublicBoardPage() {
           ))}
         </div>
       )}
+
+      <details className="board-broadcast">
+        <summary>Transmisión — overlay y feeds de datos</summary>
+        <div className="board-broadcast-body">
+          <p>
+            Para superponer los resultados sobre la señal de video (OBS / vMix), agrega el
+            overlay como «browser source» con fondo transparente. Los sistemas de gráficos
+            también pueden leer los feeds de datos, que se actualizan en cada consulta.
+          </p>
+          <div className="broadcast-url-row">
+            <strong>Overlay (OBS/vMix)</strong>
+            <code>{`${origin}/overlay/${event.id}`}</code>
+          </div>
+          <div className="broadcast-url-row">
+            <strong>Feed JSON</strong>
+            <code>{`${origin}/api/events/${event.id}/board/feed.json`}</code>
+          </div>
+          <div className="broadcast-url-row">
+            <strong>Feed CSV</strong>
+            <code>{`${origin}/api/events/${event.id}/board/feed.csv`}</code>
+          </div>
+          <div className="broadcast-url-row">
+            <strong>Feed XML</strong>
+            <code>{`${origin}/api/events/${event.id}/board/feed.xml`}</code>
+          </div>
+          <p>
+            Parámetros del overlay: <code>?section=2</code> (sección por número o id;
+            por defecto la última publicada), <code>top=20</code> (filas),{" "}
+            <code>refresh=5</code> (segundos), <code>gap=0</code> (ocultar la diferencia con
+            el líder) y <code>header=0</code> (ocultar título). En los feeds,{" "}
+            <code>?section=2</code> filtra una sola sección.
+          </p>
+        </div>
+      </details>
 
       <footer className="board-footer">
         <span>{event.footerText || "Gran Premio Mobil Delvac · Cronometraje GPMD"}</span>
