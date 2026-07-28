@@ -3,5 +3,6 @@ dist/
 *.tmp
 .DS_Store
 *.log
+.env
 data/uploads/headers/*
 !data/uploads/headers/.gitkeep

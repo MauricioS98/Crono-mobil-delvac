@@ -2,6 +2,12 @@ import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
 import type { Event, Pilot } from "./types.js";
+import {
+  loadAllEvents,
+  loadEvent,
+  persistEvent,
+  removeEvent,
+} from "./eventsRepo.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 export const DATA_ROOT = path.resolve(__dirname, "../../data");
@@ -19,32 +25,13 @@ function ensureDirs() {
 
 ensureDirs();
 
-function writeJsonAtomic(filePath: string, data: unknown) {
-  const tmp = `${filePath}.tmp`;
-  fs.writeFileSync(tmp, JSON.stringify(data, null, 2), "utf-8");
-  fs.renameSync(tmp, filePath);
-}
-
 /** Strip secrets before sending event data to the client */
 export function publicEvent(event: Event): Omit<Event, "password"> & { hasPassword: boolean } {
   const { password: _pw, ...rest } = event;
   return { ...rest, hasPassword: Boolean(event.password) };
 }
 
-export function listEvents(): Event[] {
-  ensureDirs();
-  const files = fs.readdirSync(EVENTS_DIR).filter((f) => f.endsWith(".json"));
-  const events = files.map((f) => {
-    const id = f.replace(/\.json$/, "");
-    return getEvent(id)!;
-  });
-  return events.sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
-}
-
-export function getEvent(id: string): Event | null {
-  const file = path.join(EVENTS_DIR, `${id}.json`);
-  if (!fs.existsSync(file)) return null;
-  const event = JSON.parse(fs.readFileSync(file, "utf-8")) as Event;
+function normalizeLoaded(event: Event): Event {
   event.pilots = event.pilots || [];
   event.fusions = event.fusions || [];
   event.resultsBoard = event.resultsBoard || [];
@@ -79,31 +66,38 @@ export function getEvent(id: string): Event | null {
         ? [t.toPointId]
         : [],
   }));
-
-  // Migrate events created before passwords existed
   if (!event.password || String(event.password).trim() === "") {
     event.password = DEFAULT_EVENT_PASSWORD;
-    writeJsonAtomic(file, event);
   }
-
   return event;
 }
 
-export function saveEvent(event: Event): Event {
+export async function listEvents(): Promise<Event[]> {
+  const events = await loadAllEvents();
+  return events.map(normalizeLoaded);
+}
+
+export async function getEvent(id: string): Promise<Event | null> {
+  const event = await loadEvent(id);
+  if (!event) return null;
+  return normalizeLoaded(event);
+}
+
+export async function saveEvent(event: Event): Promise<Event> {
   ensureDirs();
   if (!event.pilots) event.pilots = [];
   if (!event.password || String(event.password).trim() === "") {
     event.password = DEFAULT_EVENT_PASSWORD;
   }
   event.updatedAt = new Date().toISOString();
-  writeJsonAtomic(path.join(EVENTS_DIR, `${event.id}.json`), event);
+  if (!event.createdAt) event.createdAt = event.updatedAt;
+  await persistEvent(event);
   return event;
 }
 
-export function deleteEvent(id: string): boolean {
-  const file = path.join(EVENTS_DIR, `${id}.json`);
-  if (!fs.existsSync(file)) return false;
-  fs.unlinkSync(file);
+export async function deleteEvent(id: string): Promise<boolean> {
+  const ok = await removeEvent(id);
+  if (!ok) return false;
   const header = path.join(HEADERS_DIR, `${id}`);
   for (const ext of [".png", ".jpg", ".jpeg", ".webp", ".gif"]) {
     const p = header + ext;

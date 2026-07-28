@@ -91,28 +91,28 @@ function emptyEvent(body: Partial<Event> & { password?: string }): Event {
 }
 
 // ─── Events ───────────────────────────────────────────────
-router.get("/events", (_req, res) => {
-  res.json(listEvents().map(publicEvent));
+router.get("/events", async (_req, res) => {
+  res.json((await listEvents()).map(publicEvent));
 });
 
-router.get("/events/:id", (req, res) => {
-  const event = getEvent(req.params.id);
+router.get("/events/:id", async (req, res) => {
+  const event = await getEvent(req.params.id);
   if (!event) return res.status(404).json({ error: "Evento no encontrado" });
   res.json(publicEvent(event));
 });
 
-router.post("/events", (req, res) => {
+router.post("/events", async (req, res) => {
   try {
     const event = emptyEvent(req.body || {});
-    saveEvent(event);
+    await saveEvent(event);
     res.status(201).json(publicEvent(event));
   } catch (err) {
     res.status(400).json({ error: err instanceof Error ? err.message : "Error al crear evento" });
   }
 });
 
-router.post("/events/:id/auth", (req, res) => {
-  const event = getEvent(req.params.id);
+router.post("/events/:id/auth", async (req, res) => {
+  const event = await getEvent(req.params.id);
   if (!event) return res.status(404).json({ error: "Evento no encontrado" });
   const password = String(req.body?.password ?? "");
   if (!verifyEventPassword(event, password)) {
@@ -121,8 +121,8 @@ router.post("/events/:id/auth", (req, res) => {
   res.json({ ok: true });
 });
 
-router.put("/events/:id", (req, res) => {
-  const existing = getEvent(req.params.id);
+router.put("/events/:id", async (req, res) => {
+  const existing = await getEvent(req.params.id);
   if (!existing) return res.status(404).json({ error: "Evento no encontrado" });
 
   let nextPassword = existing.password || DEFAULT_EVENT_PASSWORD;
@@ -150,21 +150,21 @@ router.put("/events/:id", (req, res) => {
         ? existing.themeColors ?? null
         : sanitizeThemeColors(req.body.themeColors),
   };
-  saveEvent(updated);
+  await saveEvent(updated);
   res.json(publicEvent(updated));
 });
 
-router.delete("/events/:id", (req, res) => {
-  const event = getEvent(req.params.id);
+router.delete("/events/:id", async (req, res) => {
+  const event = await getEvent(req.params.id);
   if (!event) return res.status(404).json({ error: "Evento no encontrado" });
   const block = assertCanDeleteEvent(event);
   if (block) return res.status(409).json({ error: block });
-  if (!deleteEvent(req.params.id)) return res.status(404).json({ error: "Evento no encontrado" });
+  if (!await deleteEvent(req.params.id)) return res.status(404).json({ error: "Evento no encontrado" });
   res.json({ ok: true });
 });
 
-router.post("/events/:id/header", upload.single("image"), (req, res) => {
-  const event = getEvent(req.params.id);
+router.post("/events/:id/header", upload.single("image"), async (req, res) => {
+  const event = await getEvent(req.params.id);
   if (!event) return res.status(404).json({ error: "Evento no encontrado" });
   if (!req.file) return res.status(400).json({ error: "Imagen requerida" });
 
@@ -173,13 +173,13 @@ router.post("/events/:id/header", upload.single("image"), (req, res) => {
   const dest = path.join(HEADERS_DIR, filename);
   fs.writeFileSync(dest, req.file.buffer);
   event.headerImage = filename;
-  saveEvent(event);
+  await saveEvent(event);
   res.json(publicEvent(event));
 });
 
 // ─── Timing points ────────────────────────────────────────
-router.put("/events/:id/timing-points", (req, res) => {
-  const event = getEvent(req.params.id);
+router.put("/events/:id/timing-points", async (req, res) => {
+  const event = await getEvent(req.params.id);
   if (!event) return res.status(404).json({ error: "Evento no encontrado" });
 
   const points: TimingPoint[] = (req.body.timingPoints || []).map(
@@ -202,7 +202,7 @@ router.put("/events/:id/timing-points", (req, res) => {
   }
 
   event.timingPoints = points;
-  saveEvent(event);
+  await saveEvent(event);
   res.json({
     ...publicEvent(event),
     timingPoints: event.timingPoints.map((p) => ({
@@ -213,8 +213,8 @@ router.put("/events/:id/timing-points", (req, res) => {
 });
 
 // ─── Tests & parts ────────────────────────────────────────
-router.post("/events/:id/tests", (req, res) => {
-  const event = getEvent(req.params.id);
+router.post("/events/:id/tests", async (req, res) => {
+  const event = await getEvent(req.params.id);
   if (!event) return res.status(404).json({ error: "Evento no encontrado" });
 
   const test: Test = {
@@ -232,12 +232,12 @@ router.post("/events/:id/tests", (req, res) => {
     penalties: [],
   };
   event.tests.push(test);
-  saveEvent(event);
+  await saveEvent(event);
   res.status(201).json(test);
 });
 
-router.put("/events/:id/tests/:testId", (req, res) => {
-  const event = getEvent(req.params.id);
+router.put("/events/:id/tests/:testId", async (req, res) => {
+  const event = await getEvent(req.params.id);
   if (!event) return res.status(404).json({ error: "Evento no encontrado" });
   const test = getTest(event, req.params.testId);
   if (!test) return res.status(404).json({ error: "Prueba no encontrada" });
@@ -269,12 +269,12 @@ router.put("/events/:id/tests/:testId", (req, res) => {
   if (test.description == null) test.description = "";
   if (test.showDescriptionInPdf == null) test.showDescriptionInPdf = false;
   if (!test.timingMode) test.timingMode = "point_to_point";
-  saveEvent(event);
+  await saveEvent(event);
   res.json(test);
 });
 
-router.delete("/events/:id/tests/:testId", (req, res) => {
-  const event = getEvent(req.params.id);
+router.delete("/events/:id/tests/:testId", async (req, res) => {
+  const event = await getEvent(req.params.id);
   if (!event) return res.status(404).json({ error: "Evento no encontrado" });
   const test = getTest(event, req.params.testId);
   if (!test) return res.status(404).json({ error: "Prueba no encontrada" });
@@ -284,12 +284,12 @@ router.delete("/events/:id/tests/:testId", (req, res) => {
   event.resultsBoard = (event.resultsBoard || []).filter(
     (e) => !(e.kind === "unified" && e.refId === req.params.testId)
   );
-  saveEvent(event);
+  await saveEvent(event);
   res.json({ ok: true });
 });
 
-router.post("/events/:id/tests/:testId/parts", (req, res) => {
-  const event = getEvent(req.params.id);
+router.post("/events/:id/tests/:testId/parts", async (req, res) => {
+  const event = await getEvent(req.params.id);
   if (!event) return res.status(404).json({ error: "Evento no encontrado" });
   const test = getTest(event, req.params.testId);
   if (!test) return res.status(404).json({ error: "Prueba no encontrada" });
@@ -309,12 +309,12 @@ router.post("/events/:id/tests/:testId/parts", (req, res) => {
     csvs: [],
   };
   test.parts.push(part);
-  saveEvent(event);
+  await saveEvent(event);
   res.status(201).json(part);
 });
 
-router.put("/events/:id/tests/:testId/parts/:partId", (req, res) => {
-  const event = getEvent(req.params.id);
+router.put("/events/:id/tests/:testId/parts/:partId", async (req, res) => {
+  const event = await getEvent(req.params.id);
   if (!event) return res.status(404).json({ error: "Evento no encontrado" });
   const test = getTest(event, req.params.testId);
   if (!test) return res.status(404).json({ error: "Prueba no encontrada" });
@@ -338,12 +338,12 @@ router.put("/events/:id/tests/:testId/parts/:partId", (req, res) => {
     part.expectedLaps =
       raw === null || raw === "" || raw === "indeterminate" ? null : Number(raw);
   }
-  saveEvent(event);
+  await saveEvent(event);
   res.json(part);
 });
 
-router.delete("/events/:id/tests/:testId/parts/:partId", (req, res) => {
-  const event = getEvent(req.params.id);
+router.delete("/events/:id/tests/:testId/parts/:partId", async (req, res) => {
+  const event = await getEvent(req.params.id);
   if (!event) return res.status(404).json({ error: "Evento no encontrado" });
   const test = getTest(event, req.params.testId);
   if (!test) return res.status(404).json({ error: "Prueba no encontrada" });
@@ -352,7 +352,7 @@ router.delete("/events/:id/tests/:testId/parts/:partId", (req, res) => {
   const block = assertCanDeletePart(event, test, part);
   if (block) return res.status(409).json({ error: block });
   test.parts = test.parts.filter((p) => p.id !== req.params.partId);
-  saveEvent(event);
+  await saveEvent(event);
   res.json({ ok: true });
 });
 
@@ -360,8 +360,8 @@ router.delete("/events/:id/tests/:testId/parts/:partId", (req, res) => {
 router.post(
   "/events/:id/tests/:testId/parts/:partId/csv",
   upload.single("file"),
-  (req, res) => {
-    const event = getEvent(req.params.id);
+  async (req, res) => {
+    const event = await getEvent(req.params.id);
     if (!event) return res.status(404).json({ error: "Evento no encontrado" });
     const test = getTest(event, req.params.testId);
     if (!test) return res.status(404).json({ error: "Prueba no encontrada" });
@@ -398,7 +398,7 @@ router.post(
       }
     }
 
-    saveEvent(event);
+    await saveEvent(event);
     res.json({
       part,
       summary: {
@@ -412,8 +412,8 @@ router.post(
 );
 
 // ─── Results ──────────────────────────────────────────────
-router.get("/events/:id/tests/:testId/results", (req, res) => {
-  const event = getEvent(req.params.id);
+router.get("/events/:id/tests/:testId/results", async (req, res) => {
+  const event = await getEvent(req.params.id);
   if (!event) return res.status(404).json({ error: "Evento no encontrado" });
   const test = getTest(event, req.params.testId);
   if (!test) return res.status(404).json({ error: "Prueba no encontrada" });
@@ -451,8 +451,8 @@ router.get("/events/:id/tests/:testId/results", (req, res) => {
   });
 });
 
-router.get("/events/:id/fusion", (req, res) => {
-  const event = getEvent(req.params.id);
+router.get("/events/:id/fusion", async (req, res) => {
+  const event = await getEvent(req.params.id);
   if (!event) return res.status(404).json({ error: "Evento no encontrado" });
 
   const raw = req.query.tests;
@@ -512,7 +512,7 @@ async function sendFusionExport(
 }
 
 router.get("/events/:id/fusion/export/:format", async (req, res) => {
-  const event = getEvent(req.params.id);
+  const event = await getEvent(req.params.id);
   if (!event) return res.status(404).json({ error: "Evento no encontrado" });
 
   const testIds = parseFusionTestIds(req.query.tests);
@@ -531,8 +531,8 @@ router.get("/events/:id/fusion/export/:format", async (req, res) => {
   }
 });
 
-router.post("/events/:id/fusions", (req, res) => {
-  const event = getEvent(req.params.id);
+router.post("/events/:id/fusions", async (req, res) => {
+  const event = await getEvent(req.params.id);
   if (!event) return res.status(404).json({ error: "Evento no encontrado" });
 
   const name = String(req.body.name || "").trim();
@@ -555,12 +555,12 @@ router.post("/events/:id/fusions", (req, res) => {
     createdAt: new Date().toISOString(),
   };
   event.fusions.push(saved);
-  saveEvent(event);
+  await saveEvent(event);
   res.status(201).json(saved);
 });
 
-router.delete("/events/:id/fusions/:fusionId", (req, res) => {
-  const event = getEvent(req.params.id);
+router.delete("/events/:id/fusions/:fusionId", async (req, res) => {
+  const event = await getEvent(req.params.id);
   if (!event) return res.status(404).json({ error: "Evento no encontrado" });
 
   const before = event.fusions?.length || 0;
@@ -571,7 +571,7 @@ router.delete("/events/:id/fusions/:fusionId", (req, res) => {
   event.resultsBoard = (event.resultsBoard || []).filter(
     (e) => !(e.kind === "fusion" && e.refId === req.params.fusionId)
   );
-  saveEvent(event);
+  await saveEvent(event);
   res.json({ ok: true });
 });
 
@@ -646,8 +646,8 @@ function boardEventMeta(event: Event) {
   };
 }
 
-router.get("/events/:id/board", (req, res) => {
-  const event = getEvent(req.params.id);
+router.get("/events/:id/board", async (req, res) => {
+  const event = await getEvent(req.params.id);
   if (!event) return res.status(404).json({ error: "Evento no encontrado" });
 
   const board = [...(event.resultsBoard || [])].sort((a, b) => a.order - b.order);
@@ -735,8 +735,8 @@ function xmlEsc(v: string | number): string {
     .replace(/"/g, "&quot;");
 }
 
-router.get("/events/:id/board/feed.json", (req, res) => {
-  const event = getEvent(req.params.id);
+router.get("/events/:id/board/feed.json", async (req, res) => {
+  const event = await getEvent(req.params.id);
   if (!event) return res.status(404).json({ error: "Evento no encontrado" });
   const sections = selectFeedSections(event, req.query.section);
   setFeedHeaders(res, "application/json; charset=utf-8");
@@ -756,8 +756,8 @@ router.get("/events/:id/board/feed.json", (req, res) => {
   });
 });
 
-router.get("/events/:id/board/feed.csv", (req, res) => {
-  const event = getEvent(req.params.id);
+router.get("/events/:id/board/feed.csv", async (req, res) => {
+  const event = await getEvent(req.params.id);
   if (!event) return res.status(404).json({ error: "Evento no encontrado" });
   const sections = selectFeedSections(event, req.query.section);
 
@@ -786,8 +786,8 @@ router.get("/events/:id/board/feed.csv", (req, res) => {
   res.send("\uFEFF" + lines.join("\r\n"));
 });
 
-router.get("/events/:id/board/feed.xml", (req, res) => {
-  const event = getEvent(req.params.id);
+router.get("/events/:id/board/feed.xml", async (req, res) => {
+  const event = await getEvent(req.params.id);
   if (!event) return res.status(404).json({ error: "Evento no encontrado" });
   const sections = selectFeedSections(event, req.query.section);
 
@@ -811,8 +811,8 @@ router.get("/events/:id/board/feed.xml", (req, res) => {
   res.send(parts.join("\n"));
 });
 
-router.post("/events/:id/board", (req, res) => {
-  const event = getEvent(req.params.id);
+router.post("/events/:id/board", async (req, res) => {
+  const event = await getEvent(req.params.id);
   if (!event) return res.status(404).json({ error: "Evento no encontrado" });
 
   const kind = req.body.kind === "fusion" ? "fusion" : "unified";
@@ -857,7 +857,7 @@ router.post("/events/:id/board", (req, res) => {
     event.resultsBoard.forEach((e, i) => {
       e.order = i;
     });
-    saveEvent(event);
+    await saveEvent(event);
     return res.json(existing);
   }
 
@@ -871,12 +871,12 @@ router.post("/events/:id/board", (req, res) => {
     order: event.resultsBoard.length,
   };
   event.resultsBoard.push(entry);
-  saveEvent(event);
+  await saveEvent(event);
   res.status(201).json(entry);
 });
 
-router.delete("/events/:id/board/:entryId", (req, res) => {
-  const event = getEvent(req.params.id);
+router.delete("/events/:id/board/:entryId", async (req, res) => {
+  const event = await getEvent(req.params.id);
   if (!event) return res.status(404).json({ error: "Evento no encontrado" });
 
   const before = event.resultsBoard?.length || 0;
@@ -887,12 +887,12 @@ router.delete("/events/:id/board/:entryId", (req, res) => {
   event.resultsBoard.forEach((e, i) => {
     e.order = i;
   });
-  saveEvent(event);
+  await saveEvent(event);
   res.json({ ok: true, resultsBoard: event.resultsBoard });
 });
 
 router.get("/events/:id/fusions/:fusionId/export/:format", async (req, res) => {
-  const event = getEvent(req.params.id);
+  const event = await getEvent(req.params.id);
   if (!event) return res.status(404).json({ error: "Evento no encontrado" });
 
   const fusion = (event.fusions || []).find((f) => f.id === req.params.fusionId);
@@ -906,8 +906,8 @@ router.get("/events/:id/fusions/:fusionId/export/:format", async (req, res) => {
   }
 });
 
-router.put("/events/:id/tests/:testId/penalties", (req, res) => {
-  const event = getEvent(req.params.id);
+router.put("/events/:id/tests/:testId/penalties", async (req, res) => {
+  const event = await getEvent(req.params.id);
   if (!event) return res.status(404).json({ error: "Evento no encontrado" });
   const test = getTest(event, req.params.testId);
   if (!test) return res.status(404).json({ error: "Prueba no encontrada" });
@@ -925,7 +925,7 @@ router.put("/events/:id/tests/:testId/penalties", (req, res) => {
       comment: String(req.body.comment || ""),
     });
     if (!test.penalties) test.penalties = [];
-    saveEvent(event);
+    await saveEvent(event);
     res.json({ ok: true, penalties: test.penalties });
   } catch (err) {
     res.status(400).json({ error: err instanceof Error ? err.message : "Error al guardar penalización" });
@@ -933,7 +933,7 @@ router.put("/events/:id/tests/:testId/penalties", (req, res) => {
 });
 
 router.get("/events/:id/tests/:testId/export/:format", async (req, res) => {
-  const event = getEvent(req.params.id);
+  const event = await getEvent(req.params.id);
   if (!event) return res.status(404).json({ error: "Evento no encontrado" });
   const test = getTest(event, req.params.testId);
   if (!test) return res.status(404).json({ error: "Prueba no encontrada" });
@@ -1030,14 +1030,14 @@ router.get("/events/:id/tests/:testId/export/:format", async (req, res) => {
 });
 
 // ─── Event pilots ─────────────────────────────────────────
-router.get("/events/:id/pilots", (req, res) => {
-  const event = getEvent(req.params.id);
+router.get("/events/:id/pilots", async (req, res) => {
+  const event = await getEvent(req.params.id);
   if (!event) return res.status(404).json({ error: "Evento no encontrado" });
   res.json(event.pilots);
 });
 
-router.post("/events/:id/pilots/import/preview", upload.single("file"), (req, res) => {
-  if (!getEvent(req.params.id)) return res.status(404).json({ error: "Evento no encontrado" });
+router.post("/events/:id/pilots/import/preview", upload.single("file"), async (req, res) => {
+  if (!await getEvent(req.params.id)) return res.status(404).json({ error: "Evento no encontrado" });
   if (!req.file) return res.status(400).json({ error: "Archivo CSV requerido" });
   try {
     const content = req.file.buffer.toString("utf-8");
@@ -1047,8 +1047,8 @@ router.post("/events/:id/pilots/import/preview", upload.single("file"), (req, re
   }
 });
 
-router.post("/events/:id/pilots/import", upload.single("file"), (req, res) => {
-  const event = getEvent(req.params.id);
+router.post("/events/:id/pilots/import", upload.single("file"), async (req, res) => {
+  const event = await getEvent(req.params.id);
   if (!event) return res.status(404).json({ error: "Evento no encontrado" });
   if (!req.file) return res.status(400).json({ error: "Archivo CSV requerido" });
   try {
@@ -1062,7 +1062,7 @@ router.post("/events/:id/pilots/import", upload.single("file"), (req, res) => {
     const skipFirstRow = req.body.skipFirstRow !== "false" && req.body.skipFirstRow !== false;
     const result = importPilotsFromCsv(content, event.pilots || [], mapping, { skipFirstRow });
     event.pilots = result.pilots;
-    saveEvent(event);
+    await saveEvent(event);
     res.json({
       pilots: result.pilots,
       summary: {
@@ -1078,8 +1078,8 @@ router.post("/events/:id/pilots/import", upload.single("file"), (req, res) => {
   }
 });
 
-router.post("/events/:id/pilots", (req, res) => {
-  const event = getEvent(req.params.id);
+router.post("/events/:id/pilots", async (req, res) => {
+  const event = await getEvent(req.params.id);
   if (!event) return res.status(404).json({ error: "Evento no encontrado" });
   const pilot: Pilot = {
     id: uuid(),
@@ -1091,25 +1091,25 @@ router.post("/events/:id/pilots", (req, res) => {
   };
   event.pilots = event.pilots || [];
   event.pilots.push(pilot);
-  saveEvent(event);
+  await saveEvent(event);
   res.status(201).json(pilot);
 });
 
-router.put("/events/:id/pilots/:pilotId", (req, res) => {
-  const event = getEvent(req.params.id);
+router.put("/events/:id/pilots/:pilotId", async (req, res) => {
+  const event = await getEvent(req.params.id);
   if (!event) return res.status(404).json({ error: "Evento no encontrado" });
   const idx = (event.pilots || []).findIndex((p) => p.id === req.params.pilotId);
   if (idx < 0) return res.status(404).json({ error: "Piloto no encontrado" });
   event.pilots[idx] = { ...event.pilots[idx], ...req.body, id: event.pilots[idx].id };
-  saveEvent(event);
+  await saveEvent(event);
   res.json(event.pilots[idx]);
 });
 
-router.delete("/events/:id/pilots/:pilotId", (req, res) => {
-  const event = getEvent(req.params.id);
+router.delete("/events/:id/pilots/:pilotId", async (req, res) => {
+  const event = await getEvent(req.params.id);
   if (!event) return res.status(404).json({ error: "Evento no encontrado" });
   event.pilots = (event.pilots || []).filter((p) => p.id !== req.params.pilotId);
-  saveEvent(event);
+  await saveEvent(event);
   res.json({ ok: true });
 });
 

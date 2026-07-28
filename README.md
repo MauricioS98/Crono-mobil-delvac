@@ -4,10 +4,14 @@ Aplicativo web de cronometraje para pruebas de motociclismo (CSV de puntos de co
 
 ## Stack
 
-- **Backend:** Node.js + Express (TypeScript), persistencia en JSON
+- **Backend:** Node.js + Express (TypeScript), **PostgreSQL** (`minerva_timing_live`)
 - **Frontend:** React + Vite (TypeScript)
 
 ## Arranque
+
+1. Crea/aplica la DB (ver [`db/README.md`](db/README.md)) si aún no lo hiciste en pgAdmin.
+2. Copia `.env.example` → `.env` y pon tu contraseña de Postgres (`PGPASSWORD`).
+3. Arranca:
 
 ```bash
 npm run install:all
@@ -19,14 +23,24 @@ npm run dev
 | Frontend  | http://localhost:5173 |
 | API       | http://localhost:4000 |
 
+`GET /api/health` debe responder con `"database": "minerva_timing_live"`.
+
 La API escucha en todas las interfaces (`0.0.0.0`) para uso en LAN.
 
 ## Datos
 
-Todo se guarda bajo `/data`:
+Persistencia en **PostgreSQL**. Esquema y seed: [`db/`](db/README.md).
 
-- `data/events/{id}.json` — evento, contraseña, puntos, pilotos, pruebas, CSV parseados, fusiones, tablero
-- `data/uploads/headers/` — imagen de cabecera por evento
+```env
+PGHOST=localhost
+PGPORT=5432
+PGUSER=postgres
+PGPASSWORD=tu_password
+PGDATABASE=minerva_timing_live
+```
+
+Cabeceras de imagen en disco: `data/uploads/headers/`.  
+Los JSON en `data/events/` son respaldo histórico; la API ya no los usa.
 
 Los pilotos viven **dentro de cada evento**, no en una base global.
 
