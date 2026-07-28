@@ -1,0 +1,27 @@
+services:
+  - type: web
+    name: crono-mobil-delvac-redbull
+    runtime: node
+    plan: free
+    region: virginia
+    branch: Redbull
+    buildCommand: npm ci --prefix backend && npm ci --prefix frontend && npm run build
+    startCommand: npm start
+    healthCheckPath: /api/health
+    autoDeploy: true
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: NODE_VERSION
+        value: 22.22.0
+      - key: DATABASE_URL
+        fromDatabase:
+          name: crono-mobil-delvac-db
+          property: connectionString
+
+databases:
+  - name: crono-mobil-delvac-db
+    plan: free
+    region: virginia
+    databaseName: minerva_timing_live
+    user: minerva_timing
