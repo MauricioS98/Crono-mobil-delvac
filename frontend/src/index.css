@@ -1334,15 +1334,43 @@ tr:hover td {
 }
 
 .results-controls {
-  display: grid;
-  grid-template-columns: 1fr 1fr auto;
+  display: flex;
+  flex-wrap: wrap;
   gap: 0.65rem;
   align-items: end;
 }
 
+.results-controls .field {
+  flex: 1 1 160px;
+  min-width: 140px;
+  max-width: 280px;
+}
+
+.combined-results-note {
+  flex: 1 1 280px;
+  margin: 0;
+  padding: 0.65rem 0.85rem;
+  border: 1px solid rgba(245, 40, 50, 0.28);
+  border-radius: 8px;
+  background: rgba(245, 40, 50, 0.06);
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  line-height: 1.4;
+}
+
+.combined-results-note p {
+  margin: 0;
+}
+
+.combined-results-note strong {
+  color: var(--text);
+}
+
 @media (max-width: 720px) {
-  .results-controls {
-    grid-template-columns: 1fr;
+  .results-controls .field,
+  .combined-results-note {
+    max-width: none;
+    flex-basis: 100%;
   }
 
   .results-run-btn {

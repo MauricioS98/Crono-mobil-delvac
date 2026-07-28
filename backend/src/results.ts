@@ -116,17 +116,62 @@ function correctedTime(rawMs: number, point: TimingPoint | undefined): number {
   return rawMs - (point?.offsetMs ?? 0);
 }
 
-function firstLapPassageByPilot(
+/**
+ * CSV único por tiempo: Start y Finish viven en el mismo archivo.
+ * Preferencia: 1ª pasada = salida, 2ª = llegada (Tm de pasos).
+ * Fallback legacy: columna "Tiempo de vuelta" > 0 si solo hay una pasada.
+ */
+function combinedStartFinishByPilot(
   parsed: ParsedCsv
-): Map<string, { number: string; name: string; lap: number }> {
-  const map = new Map<string, { number: string; name: string; lap: number }>();
-  for (const p of parsed.racePassages) {
-    const key = normalizeNumber(p.number);
-    if (map.has(key)) continue;
-    if (p.lapTimeMs == null || p.lapTimeMs <= 0) continue;
-    map.set(key, { number: p.number, name: p.name, lap: p.lapTimeMs });
+): {
+  complete: { number: string; name: string; timeMs: number; via: "passages" | "lap" }[];
+  incomplete: { number: string; name: string; reason: "missing_finish" }[];
+  nonPositive: number;
+} {
+  const byPilot = racePassagesByPilot(parsed);
+  const complete: { number: string; name: string; timeMs: number; via: "passages" | "lap" }[] = [];
+  const incomplete: { number: string; name: string; reason: "missing_finish" }[] = [];
+  let nonPositive = 0;
+
+  for (const [, list] of byPilot) {
+    const start = list[0];
+    const finish = list[1];
+    if (start && finish) {
+      const delta = finish.tm - start.tm;
+      if (delta <= 0) {
+        nonPositive++;
+        continue;
+      }
+      complete.push({
+        number: start.number,
+        name: pickName(start.name, finish.name),
+        timeMs: delta,
+        via: "passages",
+      });
+      continue;
+    }
+
+    const lapHit = list.find((p) => p.lap != null && p.lap > 0);
+    if (lapHit && lapHit.lap != null) {
+      complete.push({
+        number: lapHit.number,
+        name: lapHit.name,
+        timeMs: lapHit.lap,
+        via: "lap",
+      });
+      continue;
+    }
+
+    if (start && !finish) {
+      incomplete.push({
+        number: start.number,
+        name: start.name,
+        reason: "missing_finish",
+      });
+    }
   }
-  return map;
+
+  return { complete, incomplete, nonPositive };
 }
 
 interface LapPilotResult {
@@ -629,20 +674,48 @@ export function computePartResults(
       return { rows: applyPenalties(rankLapRaw(rows), test.penalties, scope), scope };
     }
 
-    const byPilot = firstLapPassageByPilot(slot.parsed);
-    const rows: ResultRow[] = [];
-    for (const [, p] of byPilot) {
-      rows.push(enrich(pilots, p.number, p.name, p.lap, "CSV combinado (Tiempo de vuelta)", part));
-    }
-    if (rows.length === 0) {
+    const byPilot = combinedStartFinishByPilot(slot.parsed);
+    const complete: ResultRow[] = byPilot.complete.map((p) =>
+      enrich(
+        pilots,
+        p.number,
+        p.name,
+        p.timeMs,
+        p.via === "passages"
+          ? "CSV único (Start → Finish, mismo archivo)"
+          : "CSV único (Tiempo de vuelta)",
+        part
+      )
+    );
+    const incomplete: ResultRow[] = byPilot.incomplete.map((p) =>
+      enrichIncomplete(
+        pilots,
+        p.number,
+        p.name,
+        "missing_finish",
+        "Start",
+        "Finish (2ª pasada)",
+        part
+      )
+    );
+    if (complete.length === 0 && incomplete.length === 0) {
       return {
         rows: [],
         warning:
-          "No se encontraron tiempos de vuelta (> 0) en el CSV. Si usas dos puntos, cambia a modo CSV por punto.",
+          byPilot.nonPositive > 0
+            ? "Hay pasadas, pero el tiempo Start→Finish salió ≤ 0. Revisa el orden de Tm de pasos en el CSV."
+            : "No se encontraron 2 pasadas (Start/Finish) ni tiempos de vuelta (> 0) en el CSV único.",
         scope,
       };
     }
-    return { rows: applyPenalties(rankRaw(rows), test.penalties, scope), scope };
+    return {
+      rows: mergeCompleteAndIncomplete(complete, incomplete, test.penalties, scope),
+      warning:
+        byPilot.nonPositive > 0
+          ? `${byPilot.nonPositive} piloto(s) con tiempo ≤ 0 entre 1ª y 2ª pasada.`
+          : undefined,
+      scope,
+    };
   }
 
   // Start/Finish + parcial(es): A sale, B parcial, A llega → sectores + total

@@ -997,7 +997,7 @@ export function EventDetailPage() {
                                     hint={
                                       selectedPart.combinedScoring === "laps"
                                         ? "Usa columnas Vueltas y T° Transcurrido"
-                                        : "Tiempo de vuelta ≠ 0 = tiempo de carrera"
+                                        : "1ª pasada = Start, 2ª = Finish (mismo archivo)"
                                     }
                                     filename={selectedPart.csvs[0]?.filename}
                                     onFile={(f) =>
@@ -1037,8 +1037,9 @@ export function EventDetailPage() {
                                   Calcular resultado parcial
                                 </button>
                                 <p className="muted" style={{ fontSize: "0.8rem", margin: "0.5rem 0 0" }}>
-                                  Si el CSV es acumulativo, solo se listan pilotos nuevos respecto a
-                                  salidas anteriores.
+                                  {selectedPart.combinedMode && selectedPart.combinedScoring !== "laps"
+                                    ? "Start y Finish salen del mismo CSV (1ª y 2ª pasada). Si el CSV es acumulativo entre salidas, solo se listan pilotos nuevos."
+                                    : "Si el CSV es acumulativo, solo se listan pilotos nuevos respecto a salidas anteriores."}
                                 </p>
                               </div>
                             )}
@@ -1052,11 +1053,29 @@ export function EventDetailPage() {
                         </header>
 
                         <p className="muted" style={{ fontSize: "0.78rem", margin: "0 0 0.5rem" }}>
-                          Configura cómo se miden los tiempos en esta prueba. La fusión usa esta
-                          configuración de cada prueba por separado.
+                          {selectedPart?.combinedMode
+                            ? "Esta salida usa CSV único: Start y Finish se leen del mismo archivo."
+                            : "Configura cómo se miden los tiempos en esta prueba. La fusión usa esta configuración de cada prueba por separado."}
                         </p>
 
                         <div className="results-controls">
+                          {selectedPart?.combinedMode ? (
+                            <div className="combined-results-note">
+                              {selectedPart.combinedScoring === "laps" ? (
+                                <p>
+                                  Clasificación por <strong>vueltas</strong> del CSV único (columnas de
+                                  vueltas / tiempo transcurrido).
+                                </p>
+                              ) : (
+                                <p>
+                                  Por tiempo: la <strong>1ª pasada</strong> es la salida y la{" "}
+                                  <strong>2ª</strong> la llegada (mismo CSV). Si solo hay una pasada con
+                                  Tiempo de vuelta &gt; 0, se usa ese valor.
+                                </p>
+                              )}
+                            </div>
+                          ) : (
+                            <>
                           <div className="field" style={{ minWidth: "220px" }}>
                             <label>Tipo de cronometraje</label>
                             <select
@@ -1184,6 +1203,8 @@ export function EventDetailPage() {
                               </div>
                             </>
                           )}
+                            </>
+                          )}
 
                           <button
                             className="btn btn-primary results-run-btn"
@@ -1193,7 +1214,8 @@ export function EventDetailPage() {
                           </button>
                         </div>
 
-                        {(test.timingMode || "point_to_point") === "start_finish_partial" && (
+                        {!selectedPart?.combinedMode &&
+                          (test.timingMode || "point_to_point") === "start_finish_partial" && (
                           <p className="muted" style={{ fontSize: "0.78rem", margin: "0 0 0.75rem" }}>
                             En este modo cada piloto debe tener <strong>2 pasadas</strong> en Start/Finish
                             (salida y llegada) y <strong>1 pasada</strong> en el parcial entre ambas.
