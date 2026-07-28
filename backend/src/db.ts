@@ -1,5 +1,6 @@
 import pg from "pg";
 import dotenv from "dotenv";
+import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
 
@@ -49,4 +50,17 @@ export async function assertDbConnection(): Promise<void> {
     "SELECT 1 AS ok, current_database() AS db"
   );
   console.log(`PostgreSQL OK → ${r.rows[0].db}`);
+}
+
+/** Initialize a newly provisioned database on the first application start. */
+export async function ensureDbSchema(): Promise<void> {
+  const existing = await pool.query<{ events_table: string | null }>(
+    "SELECT to_regclass('public.events')::text AS events_table"
+  );
+  if (existing.rows[0]?.events_table) return;
+
+  const schemaPath = path.resolve(__dirname, "../../db/01_schema.sql");
+  const schema = fs.readFileSync(schemaPath, "utf8");
+  await pool.query(schema);
+  console.log("Esquema PostgreSQL inicializado");
 }
