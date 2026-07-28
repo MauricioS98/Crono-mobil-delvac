@@ -64,6 +64,38 @@ function firstRacePassageByPilot(
   return map;
 }
 
+/** All race passages per pilot, in chronological order (by Tm de pasos) */
+function racePassagesByPilot(
+  parsed: ParsedCsv
+): Map<string, { number: string; name: string; tm: number; lap: number | null }[]> {
+  const map = new Map<string, { number: string; name: string; tm: number; lap: number | null }[]>();
+  for (const p of parsed.racePassages) {
+    const key = normalizeNumber(p.number);
+    if (!map.has(key)) map.set(key, []);
+    map.get(key)!.push({
+      number: p.number,
+      name: p.name,
+      tm: p.tmPasosMs,
+      lap: p.lapTimeMs,
+    });
+  }
+  for (const [, list] of map) {
+    list.sort((a, b) => a.tm - b.tm);
+  }
+  return map;
+}
+
+/**
+ * Align a decoder reading to the reference timeline (PC A).
+ * Positive offset = that clock is ahead / “corrido hacia arriba” → subtract.
+ * Negative offset = that clock is behind / atrasado → add (via negative subtract).
+ * Formula: tiempo = (Tm_hasta − desfase_hasta) − (Tm_desde − desfase_desde)
+ * Example: B start ahead by 3:27 → desfase B = +00:03:27, Desde=B, Hasta=A.
+ */
+function correctedTime(rawMs: number, point: TimingPoint | undefined): number {
+  return rawMs - (point?.offsetMs ?? 0);
+}
+
 function firstLapPassageByPilot(
   parsed: ParsedCsv
 ): Map<string, { number: string; name: string; lap: number }> {
@@ -276,10 +308,6 @@ function compareLapResultRows(a: ResultRow, b: ResultRow): number {
   const lapsB = b.laps ?? 0;
   if (lapsB !== lapsA) return lapsB - lapsA;
   return a.rawTimeMs - b.rawTimeMs;
-}
-
-function correctedTime(rawMs: number, point: TimingPoint | undefined): number {
-  return rawMs - (point?.offsetMs ?? 0);
 }
 
 /**
@@ -615,12 +643,12 @@ export function computePartResults(
     return { rows: [], warning: `Falta cargar los CSV de ${fromLabel} y ${toLabel}.`, scope };
   }
 
-  const fromMap = fromSlot
-    ? firstRacePassageByPilot(fromSlot.parsed)
-    : new Map<string, Passage>();
-  const toMap = toSlot ? firstRacePassageByPilot(toSlot.parsed) : new Map<string, Passage>();
+  const fromByPilot = fromSlot
+    ? racePassagesByPilot(fromSlot.parsed)
+    : new Map<string, Passage[]>();
+  const toByPilot = toSlot ? racePassagesByPilot(toSlot.parsed) : new Map<string, Passage[]>();
 
-  if (fromMap.size === 0 && toMap.size === 0) {
+  if (fromByPilot.size === 0 && toByPilot.size === 0) {
     return {
       rows: [],
       warning:
@@ -632,15 +660,18 @@ export function computePartResults(
   const complete: ResultRow[] = [];
   const incomplete: ResultRow[] = [];
   let nonPositive = 0;
-  const allKeys = new Set<string>([...fromMap.keys(), ...toMap.keys()]);
+  const allKeys = new Set<string>([...fromByPilot.keys(), ...toByPilot.keys()]);
 
   for (const key of allKeys) {
-    const from = fromMap.get(key);
-    const to = toMap.get(key);
+    const fromList = fromByPilot.get(key) || [];
+    const toList = toByPilot.get(key) || [];
+    // First race hit at each point (Tm de pasos). Works for A→B and B→A once offsets sync clocks.
+    const from0 = fromList[0];
+    const to0 = toList[0];
 
-    if (from && to) {
-      const tFrom = correctedTime(from.tm, fromPoint);
-      const tTo = correctedTime(to.tm, toPoint);
+    if (from0 && to0) {
+      const tFrom = correctedTime(from0.tm, fromPoint);
+      const tTo = correctedTime(to0.tm, toPoint);
       const delta = tTo - tFrom;
       if (delta <= 0) {
         nonPositive++;
@@ -649,8 +680,8 @@ export function computePartResults(
       complete.push(
         enrich(
           pilots,
-          from.number,
-          pickName(from.name, to.name),
+          from0.number,
+          pickName(from0.name, to0.name),
           delta,
           `${fromLabel} → ${toLabel}`,
           part
@@ -659,12 +690,12 @@ export function computePartResults(
       continue;
     }
 
-    if (from && !to) {
+    if (from0 && !to0) {
       incomplete.push(
         enrichIncomplete(
           pilots,
-          from.number,
-          from.name,
+          from0.number,
+          from0.name,
           "missing_finish",
           fromLabel,
           toLabel,
@@ -674,29 +705,29 @@ export function computePartResults(
       continue;
     }
 
-    if (!from && to) {
+    if (!from0 && to0) {
       const earlierFrom = findEarlierFromPassage(event, test, part, fromId, key);
       if (earlierFrom) {
         const tFrom = correctedTime(earlierFrom.passage.tm, earlierFrom.point);
-        const tTo = correctedTime(to.tm, toPoint);
+        const tTo = correctedTime(to0.tm, toPoint);
         const delta = tTo - tFrom;
         if (delta <= 0) {
           nonPositive++;
-          continue;
+        } else {
+          complete.push(
+            enrich(
+              pilots,
+              to0.number,
+              pickName(to0.name, earlierFrom.passage.name),
+              delta,
+              `${fromLabel} (${earlierFrom.part.name}) → ${toLabel} (${part.name})`,
+              part
+            )
+          );
         }
-        complete.push(
-          enrich(
-            pilots,
-            to.number,
-            pickName(to.name, earlierFrom.passage.name),
-            delta,
-            `${fromLabel} (${earlierFrom.part.name}) → ${toLabel} (${part.name})`,
-            part
-          )
-        );
       } else {
         incomplete.push(
-          enrichIncomplete(pilots, to.number, to.name, "missing_start", fromLabel, toLabel, part)
+          enrichIncomplete(pilots, to0.number, to0.name, "missing_start", fromLabel, toLabel, part)
         );
       }
     }
@@ -706,7 +737,7 @@ export function computePartResults(
     if (nonPositive > 0) {
       return {
         rows: [],
-        warning: `Se emparejaron piloto(s), pero todos los tiempos salieron ≤ 0 tras aplicar desfases. Revisa los desfases de los puntos de cronometraje (relativos a PC A).`,
+        warning: `Se emparejaron piloto(s), pero todos los tiempos salieron ≤ 0 tras aplicar desfases. Si el inicio (p. ej. B) va adelantado respecto a A, su desfase debe ser positivo (se resta a Tm de pasos).`,
         scope,
       };
     }
@@ -717,8 +748,14 @@ export function computePartResults(
     };
   }
 
+  const warning =
+    nonPositive > 0
+      ? `${nonPositive} piloto(s) quedaron sin tiempo (≤ 0 tras desfase). Revisa el desfase del punto de inicio.`
+      : undefined;
+
   return {
     rows: mergeCompleteAndIncomplete(complete, incomplete, test.penalties, scope),
+    warning,
     scope,
   };
 }

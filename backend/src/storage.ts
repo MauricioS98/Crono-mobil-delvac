@@ -38,6 +38,7 @@ export function getEvent(id: string): Event | null {
   const event = JSON.parse(fs.readFileSync(file, "utf-8")) as Event;
   event.pilots = event.pilots || [];
   event.fusions = event.fusions || [];
+  event.resultsBoard = event.resultsBoard || [];
   event.tests = (event.tests || []).map((t) => ({
     ...t,
     description: t.description ?? "",

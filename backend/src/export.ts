@@ -50,14 +50,26 @@ function lapsCell(r: ResultRow): string {
   return r.expectedLaps != null ? `${r.laps}/${r.expectedLaps}` : String(r.laps);
 }
 
-function baseHeaders(withLaps: boolean): string[] {
+function timeHeaders(flags: PenaltyFlags): string[] {
+  if (flags.time) return ["Tiempo sin pen.", "Tiempo con pen."];
+  return ["Tiempo"];
+}
+
+function timeCells(r: ResultRow, flags: PenaltyFlags): string[] {
+  if (flags.time) {
+    return [r.rawTimeFormatted || r.timeFormatted, r.timeFormatted];
+  }
+  return [r.timeFormatted];
+}
+
+function baseHeaders(withLaps: boolean, flags: PenaltyFlags): string[] {
   const h = ["Pos", "N°", "Nombre", "Categoría", "Liga"];
   if (withLaps) h.push("Vueltas");
-  h.push("Tiempo", "Salida", "Segmento");
+  h.push(...timeHeaders(flags), "Salida", "Segmento");
   return h;
 }
 
-function baseCells(r: ResultRow, withLaps: boolean): (string | number)[] {
+function baseCells(r: ResultRow, withLaps: boolean, flags: PenaltyFlags): (string | number)[] {
   const cells: (string | number)[] = [
     r.position,
     r.number,
@@ -66,14 +78,14 @@ function baseCells(r: ResultRow, withLaps: boolean): (string | number)[] {
     r.league || "—",
   ];
   if (withLaps) cells.push(lapsCell(r));
-  cells.push(r.timeFormatted, r.partName || "—", r.segmentLabel);
+  cells.push(...timeCells(r, flags), r.partName || "—", r.segmentLabel);
   return cells;
 }
 
 export function resultsToCsv(rows: ResultRow[], title: string): string {
   const flags = penaltyFlags(rows);
   const withLaps = hasLapResults(rows);
-  const header = [...baseHeaders(withLaps), ...penaltyHeaders(flags)];
+  const header = [...baseHeaders(withLaps, flags), ...penaltyHeaders(flags)];
   const lines = [
     `# ${title}`,
     header.join(","),
@@ -86,7 +98,7 @@ export function resultsToCsv(rows: ResultRow[], title: string): string {
         esc(r.league || ""),
       ];
       if (withLaps) base.push(lapsCell(r));
-      base.push(r.timeFormatted, esc(r.partName || ""), esc(r.segmentLabel));
+      base.push(...timeCells(r, flags).map(esc), esc(r.partName || ""), esc(r.segmentLabel));
       const pens = penaltyCells(r, flags).map((c) => (typeof c === "string" ? esc(c) : c));
       return [...base, ...pens].join(",");
     }),
@@ -106,7 +118,7 @@ export async function resultsToExcel(
   wb.creator = "GPMD Cronometraje";
   const ws = wb.addWorksheet("Resultados");
 
-  const headers = [...baseHeaders(withLaps), ...penHeaders];
+  const headers = [...baseHeaders(withLaps, flags), ...penHeaders];
   const colCount = headers.length;
   ws.mergeCells(1, 1, 1, colCount);
   ws.getCell("A1").value = eventName;
@@ -124,9 +136,10 @@ export async function resultsToExcel(
   });
 
   for (const r of rows) {
-    ws.addRow([...baseCells(r, withLaps), ...penaltyCells(r, flags)]);
+    ws.addRow([...baseCells(r, withLaps, flags), ...penaltyCells(r, flags)]);
   }
 
+  const timeWidths = flags.time ? [{ width: 14 }, { width: 14 }] : [{ width: 14 }];
   const penWidths = [
     ...(flags.time ? [{ width: 12 }] : []),
     ...(flags.position ? [{ width: 10 }] : []),
@@ -139,7 +152,7 @@ export async function resultsToExcel(
     { width: 22 },
     { width: 16 },
     ...(withLaps ? [{ width: 10 }] : []),
-    { width: 14 },
+    ...timeWidths,
     { width: 14 },
     { width: 18 },
     ...penWidths,
@@ -170,10 +183,23 @@ function buildPdfColumns(flags: PenaltyFlags, pageWidth: number, withLaps: boole
   if (withLaps) {
     cols.push({ label: "Vueltas", w: 48, value: (r) => lapsCell(r) || "—" });
   }
-  cols.push(
-    { label: "Tiempo", w: 64, value: (r) => r.timeFormatted },
-    { label: "Salida", w: 72, value: (r) => r.partName || "—" }
-  );
+  if (flags.time) {
+    cols.push(
+      {
+        label: "Tiempo sin pen.",
+        w: 62,
+        value: (r) => r.rawTimeFormatted || r.timeFormatted,
+      },
+      {
+        label: "Tiempo con pen.",
+        w: 62,
+        value: (r) => r.timeFormatted,
+      }
+    );
+  } else {
+    cols.push({ label: "Tiempo", w: 64, value: (r) => r.timeFormatted });
+  }
+  cols.push({ label: "Salida", w: 72, value: (r) => r.partName || "—" });
 
   if (flags.time) {
     cols.push({

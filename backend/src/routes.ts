@@ -10,7 +10,7 @@ import {
   listEvents,
   saveEvent,
 } from "./storage.js";
-import type { Event, Pilot, Test, TestPart, TimingPoint } from "./types.js";
+import type { Event, Pilot, ResultsBoardEntry, Test, TestPart, TimingPoint } from "./types.js";
 import { parseOffsetToMs, formatOffset } from "./timeUtils.js";
 import { parseTimingCsv } from "./csvParser.js";
 import {
@@ -52,6 +52,7 @@ function emptyEvent(body: Partial<Event>): Event {
     pilots: [],
     tests: [],
     fusions: [],
+    resultsBoard: [],
     createdAt: now,
     updatedAt: now,
   };
@@ -197,6 +198,9 @@ router.delete("/events/:id/tests/:testId", (req, res) => {
   const block = assertCanDeleteTest(event, test);
   if (block) return res.status(409).json({ error: block });
   event.tests = event.tests.filter((t) => t.id !== req.params.testId);
+  event.resultsBoard = (event.resultsBoard || []).filter(
+    (e) => !(e.kind === "unified" && e.refId === req.params.testId)
+  );
   saveEvent(event);
   res.json({ ok: true });
 });
@@ -481,8 +485,126 @@ router.delete("/events/:id/fusions/:fusionId", (req, res) => {
   if (event.fusions.length === before) {
     return res.status(404).json({ error: "Fusión no encontrada" });
   }
+  event.resultsBoard = (event.resultsBoard || []).filter(
+    (e) => !(e.kind === "fusion" && e.refId === req.params.fusionId)
+  );
   saveEvent(event);
   res.json({ ok: true });
+});
+
+// ─── Public results board ─────────────────────────────────
+router.get("/events/:id/board", (req, res) => {
+  const event = getEvent(req.params.id);
+  if (!event) return res.status(404).json({ error: "Evento no encontrado" });
+
+  const board = [...(event.resultsBoard || [])].sort((a, b) => a.order - b.order);
+  const sections = [];
+
+  for (const entry of board) {
+    if (entry.kind === "unified") {
+      const test = getTest(event, entry.refId);
+      if (!test) continue;
+      const { fromId, toId } = resolveTestTimingPoints(event, test);
+      const { rows, warning } = computeTestResults(event, test, fromId, toId);
+      sections.push({
+        entry,
+        kind: "unified" as const,
+        title: entry.title || `${test.name} — Resultado unificado`,
+        rows: rows.filter((r) => !r.incomplete),
+        warning: warning || null,
+        tests: null,
+      });
+    } else if (entry.kind === "fusion") {
+      const fusion = (event.fusions || []).find((f) => f.id === entry.refId);
+      if (!fusion) continue;
+      sections.push({
+        entry,
+        kind: "fusion" as const,
+        title: entry.title || fusion.name,
+        rows: fusion.rows,
+        warning: fusion.warning || null,
+        tests: fusion.tests,
+      });
+    }
+  }
+
+  res.json({
+    event: {
+      id: event.id,
+      name: event.name,
+      date: event.date,
+      location: event.location,
+      headerImage: event.headerImage,
+      footerText: event.footerText,
+    },
+    board,
+    sections,
+  });
+});
+
+router.post("/events/:id/board", (req, res) => {
+  const event = getEvent(req.params.id);
+  if (!event) return res.status(404).json({ error: "Evento no encontrado" });
+
+  const kind = req.body.kind === "fusion" ? "fusion" : "unified";
+  const refId = String(req.body.refId || "").trim();
+  if (!refId) return res.status(400).json({ error: "refId requerido" });
+
+  let title = String(req.body.title || "").trim();
+  if (kind === "unified") {
+    const test = getTest(event, refId);
+    if (!test) return res.status(404).json({ error: "Prueba no encontrada" });
+    if (!title) title = `${test.name} — Resultado unificado`;
+  } else {
+    const fusion = (event.fusions || []).find((f) => f.id === refId);
+    if (!fusion) return res.status(404).json({ error: "Fusión no encontrada" });
+    if (!title) title = fusion.name;
+  }
+
+  if (!event.resultsBoard) event.resultsBoard = [];
+  const existing = event.resultsBoard.find((e) => e.kind === kind && e.refId === refId);
+  if (existing) {
+    // Already published: bump to end of board (re-publish order)
+    const maxOrder = event.resultsBoard.reduce((m, e) => Math.max(m, e.order), -1);
+    existing.title = title;
+    existing.publishedAt = new Date().toISOString();
+    existing.order = maxOrder + 1;
+    // Normalize order sequence
+    event.resultsBoard.sort((a, b) => a.order - b.order);
+    event.resultsBoard.forEach((e, i) => {
+      e.order = i;
+    });
+    saveEvent(event);
+    return res.json(existing);
+  }
+
+  const entry: ResultsBoardEntry = {
+    id: uuid(),
+    kind,
+    refId,
+    title,
+    publishedAt: new Date().toISOString(),
+    order: event.resultsBoard.length,
+  };
+  event.resultsBoard.push(entry);
+  saveEvent(event);
+  res.status(201).json(entry);
+});
+
+router.delete("/events/:id/board/:entryId", (req, res) => {
+  const event = getEvent(req.params.id);
+  if (!event) return res.status(404).json({ error: "Evento no encontrado" });
+
+  const before = event.resultsBoard?.length || 0;
+  event.resultsBoard = (event.resultsBoard || []).filter((e) => e.id !== req.params.entryId);
+  if ((event.resultsBoard?.length || 0) === before) {
+    return res.status(404).json({ error: "Entrada no encontrada en el tablero" });
+  }
+  event.resultsBoard.forEach((e, i) => {
+    e.order = i;
+  });
+  saveEvent(event);
+  res.json({ ok: true, resultsBoard: event.resultsBoard });
 });
 
 router.get("/events/:id/fusions/:fusionId/export/:format", async (req, res) => {

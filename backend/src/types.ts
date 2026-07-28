@@ -136,6 +136,18 @@ export interface SavedFusion {
   createdAt: string;
 }
 
+/** Entry on the public results board (publication order) */
+export interface ResultsBoardEntry {
+  id: string;
+  /** Unified test result or saved fusion */
+  kind: "unified" | "fusion";
+  /** testId or fusionId */
+  refId: string;
+  title: string;
+  publishedAt: string;
+  order: number;
+}
+
 export interface Event {
   id: string;
   name: string;
@@ -148,6 +160,8 @@ export interface Event {
   pilots: Pilot[];
   tests: Test[];
   fusions?: SavedFusion[];
+  /** Public board: unified results + fusions in publish order */
+  resultsBoard?: ResultsBoardEntry[];
   createdAt: string;
   updatedAt: string;
 }

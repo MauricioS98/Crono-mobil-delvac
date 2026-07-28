@@ -111,6 +111,15 @@ export interface SavedFusion {
   createdAt: string;
 }
 
+export interface ResultsBoardEntry {
+  id: string;
+  kind: "unified" | "fusion";
+  refId: string;
+  title: string;
+  publishedAt: string;
+  order: number;
+}
+
 export interface Event {
   id: string;
   name: string;
@@ -122,6 +131,7 @@ export interface Event {
   pilots: Pilot[];
   tests: Test[];
   fusions?: SavedFusion[];
+  resultsBoard?: ResultsBoardEntry[];
   createdAt: string;
   updatedAt: string;
 }

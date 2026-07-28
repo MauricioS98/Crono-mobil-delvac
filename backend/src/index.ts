@@ -18,6 +18,6 @@ app.get("/api/health", (_req, res) => {
   res.json({ ok: true, service: "GPMD Cronometraje" });
 });
 
-app.listen(PORT, () => {
-  console.log(`GPMD API en http://localhost:${PORT}`);
+app.listen(PORT, "0.0.0.0", () => {
+  console.log(`GPMD API en http://localhost:${PORT} (LAN: 0.0.0.0:${PORT})`);
 });

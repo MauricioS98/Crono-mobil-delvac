@@ -152,6 +152,13 @@ button {
   color: var(--text-muted);
 }
 
+.page-head-actions {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
 .actions {
   display: flex;
   gap: 0.5rem;
@@ -1714,5 +1721,165 @@ tr:hover td {
 .fusion-total {
   font-weight: 700;
   color: var(--accent-hot);
+}
+
+/* ─── Tablero público ───────────────────────────────────── */
+.board-page {
+  min-height: 100vh;
+  background:
+    radial-gradient(ellipse 80% 50% at 50% -10%, rgba(196, 160, 53, 0.12), transparent),
+    linear-gradient(180deg, #0c1210 0%, #141c18 40%, #0a0f0d 100%);
+  color: var(--text);
+  padding: 1.25rem 1.25rem 2.5rem;
+}
+
+.board-hero {
+  max-width: 1100px;
+  margin: 0 auto 1.75rem;
+  text-align: center;
+}
+
+.board-header-img {
+  display: block;
+  width: min(100%, 720px);
+  max-height: 110px;
+  object-fit: contain;
+  margin: 0 auto 1rem;
+}
+
+.board-kicker {
+  margin: 0 0 0.35rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--accent-hot);
+}
+
+.board-hero h1 {
+  margin: 0;
+  font-family: var(--display);
+  font-size: clamp(1.75rem, 4vw, 2.6rem);
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+
+.board-meta {
+  margin: 0.45rem 0 0;
+  color: var(--muted);
+  font-size: 0.95rem;
+}
+
+.board-sections {
+  max-width: 1100px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 1.75rem;
+}
+
+.board-section {
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: rgba(0, 0, 0, 0.28);
+  padding: 1rem 1.1rem 1.15rem;
+}
+
+.board-section-head {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  margin-bottom: 0.85rem;
+}
+
+.board-section-num {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  border-radius: 999px;
+  background: rgba(196, 160, 53, 0.18);
+  border: 1px solid rgba(196, 160, 53, 0.45);
+  color: var(--accent-hot);
+  font-weight: 700;
+  font-size: 0.9rem;
+}
+
+.board-section-head h2 {
+  margin: 0;
+  font-size: 1.15rem;
+  color: var(--text);
+}
+
+.board-section-kind {
+  margin: 0.15rem 0 0;
+  font-size: 0.75rem;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.board-warning {
+  margin: 0 0 0.75rem;
+  font-size: 0.8rem;
+  color: #7eb8e8;
+}
+
+.board-empty,
+.board-empty-sm {
+  max-width: 640px;
+  margin: 2rem auto;
+  text-align: center;
+  color: var(--muted);
+  line-height: 1.5;
+}
+
+.board-empty-sm {
+  margin: 0.5rem 0;
+  text-align: left;
+}
+
+.board-back {
+  text-align: center;
+}
+
+.board-table-wrap {
+  max-height: none;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+
+.board-table th,
+.board-table td {
+  font-size: 0.85rem;
+}
+
+.board-col-sub {
+  display: block;
+  font-size: 0.65rem;
+  font-weight: 400;
+  color: var(--muted);
+  margin-top: 0.1rem;
+}
+
+.board-total {
+  font-weight: 700;
+  color: var(--accent-hot);
+}
+
+.board-footer {
+  max-width: 1100px;
+  margin: 2rem auto 0;
+  padding-top: 1rem;
+  border-top: 1px solid var(--line);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+  color: var(--muted);
+  font-size: 0.8rem;
 }
 

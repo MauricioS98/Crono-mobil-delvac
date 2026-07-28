@@ -1,4 +1,4 @@
-import type { Event, FusionRow, Pilot, ResultRow, SavedFusion } from "./types";
+import type { Event, FusionRow, Pilot, ResultRow, ResultsBoardEntry, SavedFusion } from "./types";
 
 const BASE = "/api";
 
@@ -169,6 +169,43 @@ export const api = {
     if (name) q.set("name", name);
     return `${BASE}/events/${eventId}/fusion/export/${format}?${q}`;
   },
+
+  getBoard: (eventId: string) =>
+    request<{
+      event: {
+        id: string;
+        name: string;
+        date: string;
+        location: string;
+        headerImage: string | null;
+        footerText: string;
+      };
+      board: ResultsBoardEntry[];
+      sections: {
+        entry: ResultsBoardEntry;
+        kind: "unified" | "fusion";
+        title: string;
+        rows: ResultRow[] | FusionRow[];
+        warning: string | null;
+        tests: { id: string; name: string; segmentLabel: string }[] | null;
+      }[];
+    }>(`/events/${eventId}/board`),
+
+  publishToBoard: (
+    eventId: string,
+    data: { kind: "unified" | "fusion"; refId: string; title?: string }
+  ) =>
+    request<ResultsBoardEntry>(`/events/${eventId}/board`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(data),
+    }),
+
+  unpublishFromBoard: (eventId: string, entryId: string) =>
+    request<{ ok: boolean; resultsBoard: ResultsBoardEntry[] }>(
+      `/events/${eventId}/board/${entryId}`,
+      { method: "DELETE" }
+    ),
 
   savePenalty: (
     eventId: string,

@@ -55,6 +55,7 @@ export function EventDetailPage() {
   const [savingPenalty, setSavingPenalty] = useState<string | null>(null);
   const [dialog, setDialog] = useState<ConfirmDialogState | null>(null);
   const [dialogLoading, setDialogLoading] = useState(false);
+  const [publishingKey, setPublishingKey] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     if (!id) return;
@@ -253,6 +254,39 @@ export function EventDetailPage() {
     });
   };
 
+  const publishUnified = async (test: Test, title: string) => {
+    const key = `unified:${test.id}`;
+    setPublishingKey(key);
+    setError("");
+    try {
+      await api.publishToBoard(event.id, {
+        kind: "unified",
+        refId: test.id,
+        title,
+      });
+      await load();
+      setMsg(`«${title}» publicado en el tablero`);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Error al publicar");
+    } finally {
+      setPublishingKey(null);
+    }
+  };
+
+  const unpublishEntry = async (entryId: string, label: string) => {
+    setPublishingKey(entryId);
+    setError("");
+    try {
+      await api.unpublishFromBoard(event.id, entryId);
+      await load();
+      setMsg(`«${label}» quitado del tablero`);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Error al despublicar");
+    } finally {
+      setPublishingKey(null);
+    }
+  };
+
   const requestDeletePart = async (test: Test, part: TestPart) => {
     if (!event) return;
     let freshEvent = event;
@@ -341,6 +375,16 @@ export function EventDetailPage() {
             {[event.date, event.location].filter(Boolean).join(" · ") || "Configura fecha y lugar"}
           </p>
         </div>
+        <div className="page-head-actions">
+          <a
+            className="btn btn-secondary"
+            href={`/tablero/${event.id}`}
+            target="_blank"
+            rel="noreferrer"
+          >
+            Ver tablero público
+          </a>
+        </div>
       </div>
 
       {error && <div className="alert alert-error" style={{ marginBottom: "1rem" }}>{error}</div>}
@@ -402,8 +446,11 @@ export function EventDetailPage() {
             <div>
               <h3>Puntos de cronometraje</h3>
               <p>
-                PC A es la referencia (desfase 0). Los demás van relativos a A · formato{" "}
-                <code>hh:mm:ss.xxx</code>
+                PC A es la referencia (desfase 0). Si otro punto va{" "}
+                <strong>adelantado</strong> respecto a A (p. ej. B inicio con +3:27), pon desfase{" "}
+                <strong>positivo</strong> — se resta a sus <strong>Tm de pasos</strong>. Si va atrasado,
+                usa desfase negativo. Formato <code>hh:mm:ss.xxx</code>. Tiempo ={" "}
+                <code>(Tm Hasta − desfase) − (Tm Desde − desfase)</code>.
               </p>
             </div>
             <button className="btn btn-secondary btn-sm" type="button" onClick={addPoint}>
@@ -905,6 +952,42 @@ export function EventDetailPage() {
                                   </a>
                                 </>
                               )}
+                              {!testResults.partId && (
+                                (() => {
+                                  const boardEntry = (event.resultsBoard || []).find(
+                                    (e) => e.kind === "unified" && e.refId === test.id
+                                  );
+                                  if (boardEntry) {
+                                    return (
+                                      <button
+                                        type="button"
+                                        className="btn btn-ghost btn-sm"
+                                        disabled={publishingKey === boardEntry.id}
+                                        onClick={() =>
+                                          unpublishEntry(boardEntry.id, boardEntry.title)
+                                        }
+                                      >
+                                        Quitar del tablero
+                                      </button>
+                                    );
+                                  }
+                                  return (
+                                    <button
+                                      type="button"
+                                      className="btn btn-secondary btn-sm"
+                                      disabled={publishingKey === `unified:${test.id}`}
+                                      onClick={() =>
+                                        publishUnified(
+                                          test,
+                                          testResults.title || `${test.name} — Resultado unificado`
+                                        )
+                                      }
+                                    >
+                                      Publicar en tablero
+                                    </button>
+                                  );
+                                })()
+                              )}
                             </div>
                             <div className="table-wrap results-table-wrap">
                               <table className="results-table">
@@ -1121,6 +1204,7 @@ export function EventDetailPage() {
         tests={event.tests}
         points={points}
         fusions={event.fusions || []}
+        resultsBoard={event.resultsBoard || []}
         onReload={load}
       />
 

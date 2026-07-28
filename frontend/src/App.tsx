@@ -1,8 +1,20 @@
-import { NavLink, Route, Routes } from "react-router-dom";
+import { NavLink, Route, Routes, useLocation } from "react-router-dom";
 import { EventsPage } from "./pages/EventsPage";
 import { EventDetailPage } from "./pages/EventDetailPage";
+import { PublicBoardPage } from "./pages/PublicBoardPage";
 
 export default function App() {
+  const location = useLocation();
+  const isBoard = location.pathname.startsWith("/tablero/");
+
+  if (isBoard) {
+    return (
+      <Routes>
+        <Route path="/tablero/:id" element={<PublicBoardPage />} />
+      </Routes>
+    );
+  }
+
   return (
     <div className="app-shell">
       <header className="topbar">

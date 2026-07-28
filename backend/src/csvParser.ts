@@ -44,9 +44,17 @@ function findCol(headers: string[], ...names: string[]): number {
   const normalized = headers.map((h) =>
     h.replace(/^\uFEFF/, "").trim().toLowerCase().normalize("NFD").replace(/\p{M}/gu, "")
   );
+  // Prefer exact header match first (avoids "Nombre" matching "no", etc.)
   for (const name of names) {
     const target = name.toLowerCase().normalize("NFD").replace(/\p{M}/gu, "");
-    const idx = normalized.findIndex((h) => h === target || h.includes(target));
+    const exact = normalized.findIndex((h) => h === target);
+    if (exact >= 0) return exact;
+  }
+  for (const name of names) {
+    const target = name.toLowerCase().normalize("NFD").replace(/\p{M}/gu, "");
+    // Only allow includes for longer targets to avoid false positives
+    if (target.length < 4) continue;
+    const idx = normalized.findIndex((h) => h.includes(target));
     if (idx >= 0) return idx;
   }
   return -1;
@@ -125,10 +133,16 @@ export function parseTimingCsv(content: string, filename: string): ParsedCsv {
     "tiempo transcurrido",
     "tempo transcurrido"
   );
+  const colBorrado = findCol(headers, "borrado");
 
   if (colNumero < 0 || colTm < 0) {
     throw new Error('El CSV debe contener las columnas "N°" y "Tm de pasos"');
   }
+
+  const isDeleted = (raw: string) => {
+    const v = raw.trim().toLowerCase().normalize("NFD").replace(/\p{M}/gu, "");
+    return v === "yes" || v === "si" || v === "true" || v === "1" || v === "y";
+  };
 
   const passages: Passage[] = [];
   const flags: FlagEvent[] = [];
@@ -142,8 +156,12 @@ export function parseTimingCsv(content: string, filename: string): ParsedCsv {
     const lapsRaw = colLaps >= 0 ? (cols[colLaps] ?? "").trim() : "";
     const elapsedRaw = colElapsed >= 0 ? (cols[colElapsed] ?? "").trim() : "";
     const clase = colClase >= 0 ? (cols[colClase] ?? "").trim() : "";
+    const borradoRaw = colBorrado >= 0 ? (cols[colBorrado] ?? "").trim() : "";
     const tmMs = parseTimeToMs(tmRaw);
     if (tmMs === null) continue;
+
+    // Soft-deleted hits must not count toward timing
+    if (colBorrado >= 0 && isDeleted(borradoRaw)) continue;
 
     const flagType = classifyFlag(nombre, numero);
     if (flagType === "manual") continue;
