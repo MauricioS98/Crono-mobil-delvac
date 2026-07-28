@@ -100,7 +100,11 @@ export function PublicBoardPage() {
                 <div>
                   <h2>{section.title}</h2>
                   <p className="board-section-kind">
-                    {section.kind === "fusion" ? "Fusión" : "Resultado unificado"}
+                    {section.kind === "fusion"
+                      ? "Fusión"
+                      : section.entry.partId
+                        ? "Salida"
+                        : "Resultado unificado"}
                   </p>
                 </div>
                 <div className="board-section-actions">

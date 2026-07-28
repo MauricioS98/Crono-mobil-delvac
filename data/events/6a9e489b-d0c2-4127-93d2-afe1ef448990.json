@@ -9588,10 +9588,19 @@
       "order": 8,
       "fromPointId": "3638cb86-ac36-4036-831e-c389f7518926",
       "toPointId": "9811a5b1-b4e6-4f04-b11f-823f01ab7967",
-      "parts": [],
+      "parts": [
+        {
+          "id": "1c3481f5-d7ff-46c9-9904-2839aed1cffb",
+          "name": "Salida 1",
+          "order": 0,
+          "combinedMode": false,
+          "expectedLaps": null,
+          "csvs": []
+        }
+      ],
       "penalties": [],
       "rankingMode": "time",
-      "timingMode": "point_to_point",
+      "timingMode": "start_finish_partial",
       "startFinishPointId": "3638cb86-ac36-4036-831e-c389f7518926",
       "partialPointIds": [
         "9811a5b1-b4e6-4f04-b11f-823f01ab7967"
@@ -16759,7 +16768,7 @@
   ],
   "fusions": [],
   "createdAt": "2026-07-24T15:01:53.665Z",
-  "updatedAt": "2026-07-28T18:58:32.355Z",
+  "updatedAt": "2026-07-28T19:45:53.971Z",
   "resultsBoard": [
     {
       "id": "0305b88b-1a61-4f6d-a3bf-0305ea583b1f",

@@ -188,17 +188,18 @@ export function EventDetailPage() {
     return (
       <div className="event-lock">
         <div className="card event-lock-card">
-          <p className="muted" style={{ marginBottom: "0.5rem" }}>
-            <Link to="/">← Eventos</Link>
-          </p>
+          <Link to="/" className="event-manage-back">
+            ← Eventos
+          </Link>
+          <p className="manage-section-kicker">Acceso restringido</p>
           <h2>{event.name}</h2>
           <p className="muted">
-            Este panel está protegido. Ingresa la contraseña del evento para continuar.
+            Ingresa la contraseña del evento para abrir el panel de gestión.
             {event.date || event.location
-              ? ` (${[event.date, event.location].filter(Boolean).join(" · ")})`
+              ? ` · ${[event.date, event.location].filter(Boolean).join(" · ")}`
               : ""}
           </p>
-          <form className="form" onSubmit={tryUnlock} style={{ marginTop: "1rem" }}>
+          <form className="form" onSubmit={tryUnlock}>
             <div className="field">
               <label>Contraseña</label>
               <input
@@ -215,11 +216,11 @@ export function EventDetailPage() {
               {unlocking ? "Verificando…" : "Entrar al panel"}
             </button>
           </form>
-          <p style={{ marginTop: "1rem" }}>
+          <div className="event-lock-footer">
             <a className="btn btn-ghost btn-sm" href={`/tablero/${event.id}`} target="_blank" rel="noreferrer">
-              Ver tablero público (sin contraseña)
+              Tablero público
             </a>
-          </p>
+          </div>
         </div>
       </div>
     );
@@ -349,8 +350,8 @@ export function EventDetailPage() {
     });
   };
 
-  const publishUnified = async (test: Test, title: string) => {
-    const key = `unified:${test.id}`;
+  const publishUnified = async (test: Test, title: string, partId?: string | null) => {
+    const key = partId ? `part:${test.id}:${partId}` : `unified:${test.id}`;
     setPublishingKey(key);
     setError("");
     try {
@@ -358,6 +359,7 @@ export function EventDetailPage() {
         kind: "unified",
         refId: test.id,
         title,
+        partId: partId || null,
       });
       await load();
       setMsg(`«${title}» publicado en el tablero`);
@@ -459,16 +461,25 @@ export function EventDetailPage() {
   };
 
   return (
-    <div>
-      <div className="page-head">
-        <div>
-          <p className="muted" style={{ marginBottom: "0.35rem" }}>
-            <Link to="/">← Eventos</Link>
-          </p>
+    <div className="event-manage">
+      <div className="event-manage-hero">
+        <div className="event-manage-hero-main">
+          <Link to="/" className="event-manage-back">
+            ← Eventos
+          </Link>
           <h1>{event.name}</h1>
-          <p>
-            {[event.date, event.location].filter(Boolean).join(" · ") || "Configura fecha y lugar"}
+          <p className="event-manage-meta">
+            {[event.date, event.location].filter(Boolean).join(" · ") ||
+              "Configura fecha y lugar en datos del evento"}
           </p>
+          <div className="event-manage-stats">
+            <span className="chip">{event.tests.length} pruebas</span>
+            <span className="chip">{(event.pilots || []).length} pilotos</span>
+            <span className="chip">{event.timingPoints.length} puntos</span>
+            <span className="chip">
+              {(event.resultsBoard || []).length} en tablero
+            </span>
+          </div>
         </div>
         <div className="page-head-actions">
           <a
@@ -477,19 +488,36 @@ export function EventDetailPage() {
             target="_blank"
             rel="noreferrer"
           >
-            Ver tablero público
+            Tablero público
+          </a>
+          <a
+            className="btn btn-ghost"
+            href={`/overlay/${event.id}`}
+            target="_blank"
+            rel="noreferrer"
+          >
+            Overlay
           </a>
         </div>
       </div>
 
-      {error && <div className="alert alert-error" style={{ marginBottom: "1rem" }}>{error}</div>}
-      {msg && <div className="alert" style={{ marginBottom: "1rem" }}>{msg}</div>}
+      {error && <div className="alert alert-error">{error}</div>}
+      {msg && <div className="alert alert-ok">{msg}</div>}
+
+      <section className="manage-section">
+        <header className="manage-section-head">
+          <span className="manage-section-kicker">01 · Configuración</span>
+          <h2>Identidad y cronometraje</h2>
+          <p>Datos del evento, colores de transmisión y puntos de control.</p>
+        </header>
 
       <div className="setup-layout">
         <form className="setup-panel form" onSubmit={saveMeta}>
           <header className="setup-panel-head">
-            <h3>Datos del evento</h3>
-            <p>Identidad del evento e imagen para exportaciones PDF.</p>
+            <div>
+              <h3>Datos del evento</h3>
+              <p>Identidad, seguridad e imagen para exportaciones PDF.</p>
+            </div>
           </header>
 
           <div className="field">
@@ -591,20 +619,16 @@ export function EventDetailPage() {
 
         <div className="setup-panel">
           <header className="setup-panel-head">
-            <div>
-              <h3>Puntos de cronometraje</h3>
-              <p>
-                PC A es la referencia (desfase 0). Si otro punto va{" "}
-                <strong>adelantado</strong> respecto a A (p. ej. B inicio con +3:27), pon desfase{" "}
-                <strong>positivo</strong> — se resta a sus <strong>Tm de pasos</strong>. Si va atrasado,
-                usa desfase negativo. Formato <code>hh:mm:ss.xxx</code>. Tiempo ={" "}
-                <code>(Tm Hasta − desfase) − (Tm Desde − desfase)</code>.
-              </p>
-            </div>
+            <h3>Puntos de cronometraje</h3>
             <button className="btn btn-secondary btn-sm" type="button" onClick={addPoint}>
               + Punto
             </button>
           </header>
+          <p className="setup-panel-hint">
+            PC A es la referencia (desfase 0). Si otro punto va{" "}
+            <strong>adelantado</strong> respecto a A, pon desfase <strong>positivo</strong> (se resta a
+            sus Tm). Si va atrasado, usa negativo. Formato <code>hh:mm:ss.xxx</code>.
+          </p>
 
           <div className="timing-list">
             {points.map((p, i) => (
@@ -626,7 +650,7 @@ export function EventDetailPage() {
                       }}
                     />
                   </div>
-                  <div className="field">
+                  <div className="field timing-offset-field">
                     <label>Desfase</label>
                     <input
                       value={i === 0 ? "00:00:00.000" : offsetDrafts[p.id] || "00:00:00.000"}
@@ -635,18 +659,20 @@ export function EventDetailPage() {
                       placeholder="00:02:36.245"
                     />
                   </div>
-                  {i > 0 ? (
-                    <button
-                      className="btn btn-danger btn-sm row-action"
-                      type="button"
-                      onClick={() => removePoint(p.id)}
-                      aria-label={`Eliminar ${p.name}`}
-                    >
-                      ×
-                    </button>
-                  ) : (
-                    <span className="row-action-spacer" aria-hidden="true" />
-                  )}
+                  <div className="timing-point-actions">
+                    {i > 0 ? (
+                      <button
+                        className="btn btn-danger btn-sm row-action"
+                        type="button"
+                        onClick={() => removePoint(p.id)}
+                        aria-label={`Eliminar ${p.name}`}
+                      >
+                        ×
+                      </button>
+                    ) : (
+                      <span className="row-action-spacer" aria-hidden="true" />
+                    )}
+                  </div>
                 </div>
               </div>
             ))}
@@ -657,19 +683,34 @@ export function EventDetailPage() {
           </button>
         </div>
       </div>
+      </section>
 
-      <EventPilotsSection eventId={event.id} pilots={event.pilots || []} onChange={load} />
+      <section className="manage-section">
+        <header className="manage-section-head">
+          <span className="manage-section-kicker">02 · Inscripciones</span>
+          <h2>Pilotos</h2>
+          <p>Importa CSV o da de alta manualmente. La lista solo aplica a este evento.</p>
+        </header>
+        <EventPilotsSection eventId={event.id} pilots={event.pilots || []} onChange={load} />
+      </section>
 
-      <div className="section">
-        <div className="section-head">
-          <h2>Pruebas</h2>
+      <section className="manage-section">
+        <header className="manage-section-head manage-section-head-row">
+          <div>
+            <span className="manage-section-kicker">03 · Cronometraje</span>
+            <h2>Pruebas</h2>
+            <p>Mangas, salidas, CSV por punto y publicación al tablero.</p>
+          </div>
           <button className="btn btn-secondary" onClick={addTest}>
             + Nueva prueba
           </button>
-        </div>
+        </header>
 
         {event.tests.length === 0 ? (
-          <div className="empty">Crea una prueba (manga / categoría) para empezar a cargar CSV.</div>
+          <div className="empty empty-panel">
+            <strong>Sin pruebas aún</strong>
+            <span>Crea una manga o categoría para cargar CSV y calcular tiempos.</span>
+          </div>
         ) : (
           <div className="accordion">
             {event.tests.map((test) => {
@@ -1216,7 +1257,10 @@ export function EventDetailPage() {
                               {!testResults.partId && (
                                 (() => {
                                   const boardEntry = (event.resultsBoard || []).find(
-                                    (e) => e.kind === "unified" && e.refId === test.id
+                                    (e) =>
+                                      e.kind === "unified" &&
+                                      e.refId === test.id &&
+                                      !e.partId
                                   );
                                   if (boardEntry) {
                                     return (
@@ -1241,6 +1285,50 @@ export function EventDetailPage() {
                                         publishUnified(
                                           test,
                                           testResults.title || `${test.name} — Resultado unificado`
+                                        )
+                                      }
+                                    >
+                                      Publicar en tablero
+                                    </button>
+                                  );
+                                })()
+                              )}
+                              {testResults.partId && (
+                                (() => {
+                                  const boardEntry = (event.resultsBoard || []).find(
+                                    (e) =>
+                                      e.kind === "unified" &&
+                                      e.refId === test.id &&
+                                      e.partId === testResults.partId
+                                  );
+                                  if (boardEntry) {
+                                    return (
+                                      <button
+                                        type="button"
+                                        className="btn btn-ghost btn-sm"
+                                        disabled={publishingKey === boardEntry.id}
+                                        onClick={() =>
+                                          unpublishEntry(boardEntry.id, boardEntry.title)
+                                        }
+                                      >
+                                        Quitar del tablero
+                                      </button>
+                                    );
+                                  }
+                                  return (
+                                    <button
+                                      type="button"
+                                      className="btn btn-secondary btn-sm"
+                                      disabled={
+                                        publishingKey ===
+                                        `part:${test.id}:${testResults.partId}`
+                                      }
+                                      onClick={() =>
+                                        publishUnified(
+                                          test,
+                                          testResults.title ||
+                                            `${test.name} — resultado parcial`,
+                                          testResults.partId
                                         )
                                       }
                                     >
@@ -1471,7 +1559,7 @@ export function EventDetailPage() {
             })}
           </div>
         )}
-      </div>
+      </section>
 
       <EventFusionPanel
         eventId={event.id}

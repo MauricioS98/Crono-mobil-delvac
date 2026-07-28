@@ -130,16 +130,24 @@ export function OverlayPage() {
             const league = "league" in r ? r.league : "";
             const gapText =
               showGap && r.position > 1 && leaderMs && ms ? formatGap(ms - leaderMs) : "";
+            const segments =
+              "segments" in r && Array.isArray(r.segments) ? r.segments : [];
+            const hasSegments = segments.length > 0;
             return (
               <div
                 key={`${r.position}-${r.number}`}
-                className={`overlay-row${r.position <= 3 ? ` overlay-p${r.position}` : ""}`}
+                className={`overlay-row${hasSegments ? " overlay-row-segs" : ""}${r.position <= 3 ? ` overlay-p${r.position}` : ""}`}
               >
                 <span className="overlay-pos">{r.position}</span>
                 <span className="overlay-num">{r.number}</span>
                 <span className="overlay-driver">
                   <span className="overlay-name">{r.name || "—"}</span>
                   {league && <span className="overlay-league">{league}</span>}
+                  {hasSegments && (
+                    <span className="overlay-segs">
+                      {segments.map((s) => `${s.from}→${s.to} ${s.timeFormatted}`).join(" · ")}
+                    </span>
+                  )}
                 </span>
                 <span className="overlay-timing">
                   <span className="overlay-time">{rowTimeFormatted(r)}</span>

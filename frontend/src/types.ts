@@ -130,6 +130,8 @@ export interface ResultsBoardEntry {
   id: string;
   kind: "unified" | "fusion";
   refId: string;
+  /** If set with kind=unified, publishes that salida instead of the unified result */
+  partId?: string | null;
   title: string;
   publishedAt: string;
   order: number;

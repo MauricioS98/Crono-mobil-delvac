@@ -168,6 +168,11 @@ export interface ResultsBoardEntry {
   kind: "unified" | "fusion";
   /** testId or fusionId */
   refId: string;
+  /**
+   * When kind is unified and partId is set, the board shows that salida
+   * (useful for start/finish + parcial) instead of the unified best time.
+   */
+  partId?: string | null;
   title: string;
   publishedAt: string;
   order: number;

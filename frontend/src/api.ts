@@ -204,7 +204,7 @@ export const api = {
 
   publishToBoard: (
     eventId: string,
-    data: { kind: "unified" | "fusion"; refId: string; title?: string }
+    data: { kind: "unified" | "fusion"; refId: string; title?: string; partId?: string | null }
   ) =>
     request<ResultsBoardEntry>(`/events/${eventId}/board`, {
       method: "POST",

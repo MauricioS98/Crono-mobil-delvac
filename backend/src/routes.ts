@@ -589,15 +589,29 @@ function buildBoardSections(event: Event): BoardSection[] {
       const test = getTest(event, entry.refId);
       if (!test) continue;
       const { fromId, toId } = resolveTestTimingPoints(event, test);
-      const { rows, warning } = computeTestResults(event, test, fromId, toId);
-      sections.push({
-        entry,
-        kind: "unified",
-        title: entry.title || `${test.name} — Resultado unificado`,
-        rows: rows.filter((r) => !r.incomplete),
-        warning: warning || null,
-        tests: null,
-      });
+      if (entry.partId) {
+        const part = getPart(test, entry.partId);
+        if (!part) continue;
+        const { rows, warning } = computePartResults(event, test, part, fromId, toId);
+        sections.push({
+          entry,
+          kind: "unified",
+          title: entry.title || `${test.name} — ${part.name}`,
+          rows: rows.filter((r) => !r.incomplete),
+          warning: warning || null,
+          tests: null,
+        });
+      } else {
+        const { rows, warning } = computeTestResults(event, test, fromId, toId);
+        sections.push({
+          entry,
+          kind: "unified",
+          title: entry.title || `${test.name} — Resultado unificado`,
+          rows: rows.filter((r) => !r.incomplete),
+          warning: warning || null,
+          tests: null,
+        });
+      }
     } else if (entry.kind === "fusion") {
       const fusion = (event.fusions || []).find((f) => f.id === entry.refId);
       if (!fusion) continue;
@@ -787,12 +801,20 @@ router.post("/events/:id/board", (req, res) => {
   const kind = req.body.kind === "fusion" ? "fusion" : "unified";
   const refId = String(req.body.refId || "").trim();
   if (!refId) return res.status(400).json({ error: "refId requerido" });
+  const partId =
+    kind === "unified" && req.body.partId ? String(req.body.partId).trim() || null : null;
 
   let title = String(req.body.title || "").trim();
   if (kind === "unified") {
     const test = getTest(event, refId);
     if (!test) return res.status(404).json({ error: "Prueba no encontrada" });
-    if (!title) title = `${test.name} — Resultado unificado`;
+    if (partId) {
+      const part = getPart(test, partId);
+      if (!part) return res.status(404).json({ error: "Salida no encontrada" });
+      if (!title) title = `${test.name} — ${part.name}`;
+    } else if (!title) {
+      title = `${test.name} — Resultado unificado`;
+    }
   } else {
     const fusion = (event.fusions || []).find((f) => f.id === refId);
     if (!fusion) return res.status(404).json({ error: "Fusión no encontrada" });
@@ -800,11 +822,17 @@ router.post("/events/:id/board", (req, res) => {
   }
 
   if (!event.resultsBoard) event.resultsBoard = [];
-  const existing = event.resultsBoard.find((e) => e.kind === kind && e.refId === refId);
+  const existing = event.resultsBoard.find(
+    (e) =>
+      e.kind === kind &&
+      e.refId === refId &&
+      (e.partId || null) === (partId || null)
+  );
   if (existing) {
     // Already published: bump to end of board (re-publish order)
     const maxOrder = event.resultsBoard.reduce((m, e) => Math.max(m, e.order), -1);
     existing.title = title;
+    existing.partId = partId;
     existing.publishedAt = new Date().toISOString();
     existing.order = maxOrder + 1;
     // Normalize order sequence
@@ -820,6 +848,7 @@ router.post("/events/:id/board", (req, res) => {
     id: uuid(),
     kind,
     refId,
+    partId,
     title,
     publishedAt: new Date().toISOString(),
     order: event.resultsBoard.length,
