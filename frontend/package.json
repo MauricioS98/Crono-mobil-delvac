@@ -9,12 +9,12 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "gpmd": "file:..",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "react-router-dom": "^6.28.1"
   },
   "devDependencies": {
+    "@types/node": "^22.10.5",
     "@types/react": "^18.3.18",
     "@types/react-dom": "^18.3.5",
     "@vitejs/plugin-react": "^4.3.4",
