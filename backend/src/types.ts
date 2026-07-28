@@ -155,6 +155,8 @@ export interface Event {
   location: string;
   headerImage: string | null;
   footerText: string;
+  /** 4 colores del evento: [acento, resaltado, fondo paneles, texto]. null = paleta Minerva Timing */
+  themeColors?: string[] | null;
   timingPoints: TimingPoint[];
   /** Pilots registered for this event only */
   pilots: Pilot[];

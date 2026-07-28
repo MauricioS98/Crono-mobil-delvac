@@ -15,9 +15,9 @@ app.use("/uploads/headers", express.static(HEADERS_DIR));
 app.use("/api", routes);
 
 app.get("/api/health", (_req, res) => {
-  res.json({ ok: true, service: "GPMD Cronometraje" });
+  res.json({ ok: true, service: "Minerva Timing" });
 });
 
 app.listen(PORT, "0.0.0.0", () => {
-  console.log(`GPMD API en http://localhost:${PORT} (LAN: 0.0.0.0:${PORT})`);
+  console.log(`Minerva Timing API en http://localhost:${PORT} (LAN: 0.0.0.0:${PORT})`);
 });

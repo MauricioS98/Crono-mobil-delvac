@@ -1,7 +1,9 @@
 import { useCallback, useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { api } from "../api";
+import { resolveThemeColors } from "../theme";
 import type { FusionRow, ResultRow } from "../types";
+import type { CSSProperties } from "react";
 
 function isFusionRow(r: ResultRow | FusionRow): r is FusionRow {
   return "totalTimeFormatted" in r && "byTest" in r;
@@ -61,9 +63,14 @@ export function PublicBoardPage() {
   const { event, sections } = data;
   const headerUrl = event.headerImage ? `/uploads/headers/${event.headerImage}` : null;
   const origin = window.location.origin;
+  const [cAccent, cAccent2] = resolveThemeColors(event.themeColors);
+  const boardTheme = {
+    "--accent": cAccent,
+    "--accent-hot": cAccent2,
+  } as CSSProperties;
 
   return (
-    <div className="board-page">
+    <div className="board-page" style={boardTheme}>
       <header className="board-hero">
         {headerUrl && (
           <img className="board-header-img" src={headerUrl} alt="" />
@@ -249,7 +256,7 @@ export function PublicBoardPage() {
       </details>
 
       <footer className="board-footer">
-        <span>{event.footerText || "Gran Premio Mobil Delvac · Cronometraje GPMD"}</span>
+        <span>{event.footerText || "Minerva Timing"}</span>
         <button type="button" className="btn btn-ghost btn-sm" onClick={() => load()}>
           Actualizar
         </button>

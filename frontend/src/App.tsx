@@ -29,8 +29,8 @@ export default function App() {
     <div className="app-shell">
       <header className="topbar">
         <div className="brand">
-          <span className="brand-mark">GPMD</span>
-          <span className="brand-sub">Cronometraje</span>
+          <span className="brand-mark">Minerva</span>
+          <span className="brand-sub">Timing</span>
         </div>
         <nav className="nav">
           <NavLink to="/" end>

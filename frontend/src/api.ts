@@ -174,6 +174,7 @@ export const api = {
     request<{
       event: {
         id: string;
+        themeColors: string[] | null;
         name: string;
         date: string;
         location: string;

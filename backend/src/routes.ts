@@ -46,6 +46,14 @@ import { importPilotsFromCsv, previewPilotsCsv, type ColumnMapping } from "./pil
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 20 * 1024 * 1024 } });
 const router = Router();
 
+/** Valida 4 colores hex (#rrggbb); si no son válidos devuelve null (paleta Minerva por defecto) */
+function sanitizeThemeColors(value: unknown): string[] | null {
+  if (!Array.isArray(value) || value.length !== 4) return null;
+  const colors = value.map((c) => String(c).trim().toLowerCase());
+  if (!colors.every((c) => /^#[0-9a-f]{6}$/.test(c))) return null;
+  return colors;
+}
+
 function emptyEvent(body: Partial<Event>): Event {
   const now = new Date().toISOString();
   return {
@@ -54,7 +62,8 @@ function emptyEvent(body: Partial<Event>): Event {
     date: body.date || "",
     location: body.location || "",
     headerImage: null,
-    footerText: body.footerText || "Gran Premio Mobil Delvac",
+    footerText: body.footerText || "Minerva Timing",
+    themeColors: sanitizeThemeColors(body.themeColors),
     timingPoints: [
       { id: uuid(), name: "PC A", offsetMs: 0, order: 0 },
       { id: uuid(), name: "PC B", offsetMs: 0, order: 1 },
@@ -94,6 +103,10 @@ router.put("/events/:id", (req, res) => {
     date: req.body.date ?? existing.date,
     location: req.body.location ?? existing.location,
     footerText: req.body.footerText ?? existing.footerText,
+    themeColors:
+      req.body.themeColors === undefined
+        ? existing.themeColors ?? null
+        : sanitizeThemeColors(req.body.themeColors),
   };
   saveEvent(updated);
   res.json(updated);
@@ -554,6 +567,7 @@ function boardEventMeta(event: Event) {
     location: event.location,
     headerImage: event.headerImage,
     footerText: event.footerText,
+    themeColors: event.themeColors ?? null,
   };
 }
 

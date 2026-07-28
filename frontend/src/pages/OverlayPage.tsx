@@ -1,6 +1,7 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState, type CSSProperties } from "react";
 import { useParams, useSearchParams } from "react-router-dom";
 import { api } from "../api";
+import { hexToRgba, resolveThemeColors } from "../theme";
 import type { FusionRow, ResultRow } from "../types";
 
 type BoardData = Awaited<ReturnType<typeof api.getBoard>>;
@@ -83,9 +84,21 @@ export function OverlayPage() {
     return data.sections[data.sections.length - 1];
   }, [data, sectionParam]);
 
+  // Colores del evento (con la paleta Minerva como respaldo)
+  const [cAccent, cAccent2, cPanel, cText] = resolveThemeColors(data?.event.themeColors);
+  const themeStyle = {
+    "--ov-accent": cAccent,
+    "--ov-accent2": cAccent2,
+    "--ov-head-bg": hexToRgba(cPanel, 0.96),
+    "--ov-row-bg": hexToRgba(cPanel, 0.88),
+    "--ov-p1-bg": hexToRgba(cPanel, 0.96),
+    "--ov-text": cText,
+    "--ov-text-soft": hexToRgba(cText, 0.6),
+  } as CSSProperties;
+
   if (error) {
     return (
-      <div className="overlay-root">
+      <div className="overlay-root" style={themeStyle}>
         <div className="overlay-tower">
           <div className="overlay-head">
             <span className="overlay-head-title">Sin conexión con el cronometraje</span>
@@ -96,14 +109,14 @@ export function OverlayPage() {
   }
 
   if (!data || !section) {
-    return <div className="overlay-root" />;
+    return <div className="overlay-root" style={themeStyle} />;
   }
 
   const rows = section.rows.slice(0, top);
   const leaderMs = rows.length > 0 ? rowTimeMs(rows[0]) : 0;
 
   return (
-    <div className="overlay-root">
+    <div className="overlay-root" style={themeStyle}>
       <div className="overlay-tower">
         {showHeader && (
           <div className="overlay-head">

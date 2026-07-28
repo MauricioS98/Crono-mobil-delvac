@@ -115,7 +115,7 @@ export async function resultsToExcel(
   const withLaps = hasLapResults(rows);
   const penHeaders = penaltyHeaders(flags);
   const wb = new ExcelJS.Workbook();
-  wb.creator = "GPMD Cronometraje";
+  wb.creator = "Minerva Timing";
   const ws = wb.addWorksheet("Resultados");
 
   const headers = [...baseHeaders(withLaps, flags), ...penHeaders];
@@ -311,7 +311,7 @@ export async function resultsToPdf(
       // Bottom margin reserves footer zone so table text never auto-paginates into empty pages
       margins: { top: 36, bottom: FOOTER_H + 8, left: 36, right: 36 },
       bufferPages: true,
-      info: { Title: title, Author: "GPMD Cronometraje" },
+      info: { Title: title, Author: "Minerva Timing" },
     });
     const chunks: Buffer[] = [];
     doc.on("data", (c) => chunks.push(c));
@@ -408,7 +408,7 @@ export async function resultsToPdf(
         .lineWidth(0.5)
         .stroke();
       doc.fillColor("#888888").fontSize(8).font("Helvetica");
-      pdfText(doc, event.footerText || "Gran Premio Mobil Delvac · Cronometraje GPMD", left, fy, {
+      pdfText(doc, event.footerText || "Minerva Timing", left, fy, {
         width: pageWidth * 0.7,
         align: "left",
       });
@@ -480,7 +480,7 @@ export async function lapByLapToPdf(
       layout: useLandscape ? "landscape" : "portrait",
       margins: { top: 36, bottom: FOOTER_H + 8, left: 36, right: 36 },
       bufferPages: true,
-      info: { Title: title, Author: "GPMD Cronometraje" },
+      info: { Title: title, Author: "Minerva Timing" },
     });
     const chunks: Buffer[] = [];
     doc.on("data", (c) => chunks.push(c));
@@ -591,7 +591,7 @@ export async function lapByLapToPdf(
         .lineWidth(0.5)
         .stroke();
       doc.fillColor("#888888").fontSize(8).font("Helvetica");
-      pdfText(doc, event.footerText || "Gran Premio Mobil Delvac · Cronometraje GPMD", left, fy, {
+      pdfText(doc, event.footerText || "Minerva Timing", left, fy, {
         width: pageWidth * 0.7,
         align: "left",
       });
@@ -696,7 +696,7 @@ export async function lapByLapWithHoursToPdf(
       layout: "landscape",
       margins: { top: 32, bottom: FOOTER_H + 8, left: 28, right: 28 },
       bufferPages: true,
-      info: { Title: title, Author: "GPMD Cronometraje" },
+      info: { Title: title, Author: "Minerva Timing" },
     });
     const chunks: Buffer[] = [];
     doc.on("data", (c) => chunks.push(c));
@@ -810,7 +810,7 @@ export async function lapByLapWithHoursToPdf(
         .lineWidth(0.5)
         .stroke();
       doc.fillColor("#888888").fontSize(8).font("Helvetica");
-      pdfText(doc, event.footerText || "Gran Premio Mobil Delvac · Cronometraje GPMD", left, fy, {
+      pdfText(doc, event.footerText || "Minerva Timing", left, fy, {
         width: pageWidth * 0.7,
         align: "left",
       });
@@ -938,7 +938,7 @@ export async function fusionToExcel(
 ): Promise<Buffer> {
   const testHeaders = fusionTestHeaders(tests);
   const wb = new ExcelJS.Workbook();
-  wb.creator = "GPMD Cronometraje";
+  wb.creator = "Minerva Timing";
   const ws = wb.addWorksheet("Fusión");
 
   const headers = ["Pos", "N°", "Nombre", "Categoría", "Liga", ...testHeaders, "Total"];
@@ -996,7 +996,7 @@ export async function fusionToPdf(
       layout: useLandscape ? "landscape" : "portrait",
       margins: { top: 36, bottom: FOOTER_H + 8, left: 36, right: 36 },
       bufferPages: true,
-      info: { Title: title, Author: "GPMD Cronometraje" },
+      info: { Title: title, Author: "Minerva Timing" },
     });
     const chunks: Buffer[] = [];
     doc.on("data", (c) => chunks.push(c));
@@ -1098,7 +1098,7 @@ export async function fusionToPdf(
         .lineWidth(0.5)
         .stroke();
       doc.fillColor("#888888").fontSize(8).font("Helvetica");
-      pdfText(doc, event.footerText || "Gran Premio Mobil Delvac · Cronometraje GPMD", left, fy, {
+      pdfText(doc, event.footerText || "Minerva Timing", left, fy, {
         width: pageWidth * 0.7,
         align: "left",
       });

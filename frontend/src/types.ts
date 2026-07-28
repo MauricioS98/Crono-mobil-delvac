@@ -132,6 +132,8 @@ export interface Event {
   tests: Test[];
   fusions?: SavedFusion[];
   resultsBoard?: ResultsBoardEntry[];
+  /** 4 colores del evento: [acento, resaltado, fondo paneles, texto]. null = paleta Minerva Timing */
+  themeColors?: string[] | null;
   createdAt: string;
   updatedAt: string;
 }

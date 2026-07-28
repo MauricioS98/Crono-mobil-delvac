@@ -80,7 +80,7 @@ export function EventsPage() {
       <div className="page-head">
         <div>
           <h1>Eventos</h1>
-          <p>Crea el evento del Gran Premio y gestiona sus pruebas de cronometraje.</p>
+          <p>Crea un evento y gestiona sus pruebas de cronometraje con Minerva Timing.</p>
         </div>
       </div>
 
@@ -91,7 +91,7 @@ export function EventsPage() {
           <h3>Nuevo evento</h3>
           <div className="field">
             <label>Nombre</label>
-            <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Gran Premio Mobil Delvac 2026" required />
+            <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Nombre del evento" required />
           </div>
           <div className="field">
             <label>Fecha</label>

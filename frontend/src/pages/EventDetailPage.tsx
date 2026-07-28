@@ -4,6 +4,7 @@ import { api, formatOffsetInput, formatPenaltyInput, parseOffsetToMs } from "../
 import { ConfirmDialog, type ConfirmDialogState } from "../components/ConfirmDialog";
 import { canDeletePart, canDeleteTest } from "../lib/deleteGuards";
 import type { Event, ResultRow, Test, TestPart, TimingPoint } from "../types";
+import { MINERVA_COLORS, THEME_COLOR_LABELS, resolveThemeColors } from "../theme";
 import { EventPilotsSection } from "./EventPilotsSection";
 import { EventFusionPanel } from "./EventFusionPanel";
 
@@ -56,11 +57,13 @@ export function EventDetailPage() {
   const [dialog, setDialog] = useState<ConfirmDialogState | null>(null);
   const [dialogLoading, setDialogLoading] = useState(false);
   const [publishingKey, setPublishingKey] = useState<string | null>(null);
+  const [themeColors, setThemeColors] = useState<string[]>([...MINERVA_COLORS]);
 
   const load = useCallback(async () => {
     if (!id) return;
     const ev = await api.getEvent(id);
     setEvent(ev);
+    setThemeColors(resolveThemeColors(ev.themeColors));
     setOffsetDrafts(
       Object.fromEntries(ev.timingPoints.map((p) => [p.id, formatOffsetInput(p.offsetMs)]))
     );
@@ -157,11 +160,15 @@ export function EventDetailPage() {
   const saveMeta = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const fd = new FormData(e.currentTarget);
+    const isDefault =
+      themeColors.length === 4 &&
+      themeColors.every((c, i) => c.toLowerCase() === MINERVA_COLORS[i].toLowerCase());
     await api.updateEvent(event.id, {
       name: String(fd.get("name") || ""),
       date: String(fd.get("date") || ""),
       location: String(fd.get("location") || ""),
       footerText: String(fd.get("footerText") || ""),
+      themeColors: isDefault ? null : themeColors,
     });
     setMsg("Evento actualizado");
     load();
@@ -414,6 +421,36 @@ export function EventDetailPage() {
           <div className="field">
             <label>Texto pie de página (PDF)</label>
             <input name="footerText" defaultValue={event.footerText} />
+          </div>
+
+          <div className="field">
+            <label>Colores del evento</label>
+            <p className="muted" style={{ fontSize: "0.8rem", margin: "0 0 0.4rem" }}>
+              Se usan en el tablero público y sobre todo en el overlay de transmisión. Si no
+              los cambias, se usa la paleta de Minerva Timing.
+            </p>
+            <div className="theme-colors-grid">
+              {themeColors.map((color, i) => (
+                <label key={i} className="theme-color-item">
+                  <input
+                    type="color"
+                    value={color}
+                    onChange={(e) =>
+                      setThemeColors((prev) => prev.map((c, j) => (j === i ? e.target.value : c)))
+                    }
+                  />
+                  <span>{THEME_COLOR_LABELS[i]}</span>
+                </label>
+              ))}
+            </div>
+            <button
+              type="button"
+              className="btn btn-ghost btn-sm"
+              style={{ marginTop: "0.4rem" }}
+              onClick={() => setThemeColors([...MINERVA_COLORS])}
+            >
+              Restablecer paleta Minerva
+            </button>
           </div>
 
           <div className="field">
