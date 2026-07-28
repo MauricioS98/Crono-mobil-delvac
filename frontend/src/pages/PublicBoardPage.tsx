@@ -57,6 +57,9 @@ function BoardSectionBlock({
   const showLaps = section.rows.some(
     (r) => !isFusionRow(r) && r.laps != null && r.laps > 0
   );
+  const showCategory = section.rows.some(
+    (r) => !isFusionRow(r) && Boolean(r.category?.trim())
+  );
   const showPenalties = section.kind !== "fusion";
   const segLabels = segmentLabelsFor(section.rows);
   const hasSegments = segLabels.length > 0;
@@ -157,7 +160,7 @@ function BoardSectionBlock({
                 <th>Pos</th>
                 <th>N°</th>
                 <th>Nombre</th>
-                <th>Categoría</th>
+                {showCategory && <th>Categoría</th>}
                 <th>Liga</th>
                 {showLaps && <th>Vueltas</th>}
                 {segLabels.map((label) => (
@@ -188,7 +191,7 @@ function BoardSectionBlock({
                     </td>
                     <td>{r.number}</td>
                     <td>{r.name || "—"}</td>
-                    <td>{r.category || "—"}</td>
+                    {showCategory && <td>{r.category || "—"}</td>}
                     <td>{r.league || "—"}</td>
                     {showLaps && (
                       <td>

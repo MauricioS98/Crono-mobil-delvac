@@ -769,6 +769,8 @@ export function EventDetailPage() {
                 testResults?.rows.filter((r) =>
                   matchesPilotSearch(resultsSearch, r.number, r.name)
                 ) ?? [];
+              const showCategoryCol =
+                testResults?.rows.some((r) => Boolean(r.category?.trim())) ?? false;
 
               return (
                 <div key={test.id} className={`accordion-item ${open ? "open" : ""}`}>
@@ -1420,7 +1422,7 @@ export function EventDetailPage() {
                                     <th>Pos</th>
                                     <th>N°</th>
                                     <th>Nombre</th>
-                                    <th>Categoría</th>
+                                    {showCategoryCol && <th>Categoría</th>}
                                     <th>Liga</th>
                                     {showLapsCol && <th>Vueltas</th>}
                                     {segmentLabels.map((label) => (
@@ -1466,7 +1468,7 @@ export function EventDetailPage() {
                                             <span className="badge-warn"> · sin ficha</span>
                                           )}
                                         </td>
-                                        <td>{r.category || "—"}</td>
+                                        {showCategoryCol && <td>{r.category || "—"}</td>}
                                         <td>{r.league || "—"}</td>
                                         {showLapsCol && (
                                           <td>

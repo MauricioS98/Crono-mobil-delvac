@@ -15647,7 +15647,7 @@
   ],
   "fusions": [],
   "createdAt": "2026-07-24T15:01:53.665Z",
-  "updatedAt": "2026-07-28T20:56:53.695Z",
+  "updatedAt": "2026-07-28T20:59:33.232Z",
   "resultsBoard": [
     {
       "id": "0305b88b-1a61-4f6d-a3bf-0305ea583b1f",
@@ -15672,6 +15672,6 @@
     "#101020",
     "#ffffff"
   ],
-  "password": "00000",
+  "password": "Pepe",
   "boardPageSeconds": 5
 }
