@@ -4,6 +4,7 @@ import { api, formatOffsetInput, formatPenaltyInput, parseOffsetToMs } from "../
 import { ConfirmDialog, type ConfirmDialogState } from "../components/ConfirmDialog";
 import { canDeletePart, canDeleteTest } from "../lib/deleteGuards";
 import { isEventUnlocked, markEventUnlocked } from "../lib/eventAuth";
+import { matchesPilotSearch } from "../lib/search";
 import type { Event, ResultRow, Test, TestPart, TimingPoint } from "../types";
 import { MINERVA_COLORS, THEME_COLOR_LABELS, resolveThemeColors } from "../theme";
 import { EventPilotsSection } from "./EventPilotsSection";
@@ -59,6 +60,7 @@ export function EventDetailPage() {
   const [dialogLoading, setDialogLoading] = useState(false);
   const [publishingKey, setPublishingKey] = useState<string | null>(null);
   const [themeColors, setThemeColors] = useState<string[]>([...MINERVA_COLORS]);
+  const [resultsSearchByTest, setResultsSearchByTest] = useState<Record<string, string>>({});
   const [unlocked, setUnlocked] = useState(false);
   const [unlockPassword, setUnlockPassword] = useState("");
   const [unlockError, setUnlockError] = useState("");
@@ -743,6 +745,11 @@ export function EventDetailPage() {
               const showLapByLapExport = Boolean(
                 lapExportPartId && testResults && testResults.rows.length > 0
               );
+              const resultsSearch = resultsSearchByTest[test.id] || "";
+              const filteredResultRows =
+                testResults?.rows.filter((r) =>
+                  matchesPilotSearch(resultsSearch, r.number, r.name)
+                ) ?? [];
 
               return (
                 <div key={test.id} className={`accordion-item ${open ? "open" : ""}`}>
@@ -1338,6 +1345,33 @@ export function EventDetailPage() {
                                 })()
                               )}
                             </div>
+                            <div className="results-toolbar">
+                              <div className="field results-search-field">
+                                <label>Buscar piloto</label>
+                                <input
+                                  type="search"
+                                  value={resultsSearch}
+                                  onChange={(e) =>
+                                    setResultsSearchByTest((prev) => ({
+                                      ...prev,
+                                      [test.id]: e.target.value,
+                                    }))
+                                  }
+                                  placeholder="Nº o nombre…"
+                                  autoComplete="off"
+                                />
+                              </div>
+                              {resultsSearch.trim() && (
+                                <span className="muted results-search-count">
+                                  {filteredResultRows.length} de {testResults.rows.length}
+                                </span>
+                              )}
+                            </div>
+                            {filteredResultRows.length === 0 ? (
+                              <div className="empty empty-sm">
+                                Ningún piloto coincide con «{resultsSearch.trim()}».
+                              </div>
+                            ) : (
                             <div className="table-wrap results-table-wrap">
                               <table className="results-table">
                                 <thead>
@@ -1360,7 +1394,7 @@ export function EventDetailPage() {
                                   </tr>
                                 </thead>
                                 <tbody>
-                                  {testResults.rows.map((r) => {
+                                  {filteredResultRows.map((r) => {
                                     const pKey = `${test.id}:${r.number}`;
                                     const draft = penaltyDrafts[pKey] || {
                                       timePenalty: "",
@@ -1542,6 +1576,7 @@ export function EventDetailPage() {
                                 </tbody>
                               </table>
                             </div>
+                            )}
                             <p className="muted" style={{ fontSize: "0.8rem", margin: 0 }}>
                               Pen. tiempo: formato <code>m:ss.xxx</code> o <code>hh:mm:ss.xxx</code>{" "}
                               (atajos <strong>−5</strong> / <strong>+5</strong>). Pen. pos: posiciones a
