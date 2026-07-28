@@ -3,6 +3,7 @@ import { Link, useParams } from "react-router-dom";
 import { api, formatOffsetInput, formatPenaltyInput, parseOffsetToMs } from "../api";
 import { ConfirmDialog, type ConfirmDialogState } from "../components/ConfirmDialog";
 import { canDeletePart, canDeleteTest } from "../lib/deleteGuards";
+import { isEventUnlocked, markEventUnlocked } from "../lib/eventAuth";
 import type { Event, ResultRow, Test, TestPart, TimingPoint } from "../types";
 import { MINERVA_COLORS, THEME_COLOR_LABELS, resolveThemeColors } from "../theme";
 import { EventPilotsSection } from "./EventPilotsSection";
@@ -58,6 +59,12 @@ export function EventDetailPage() {
   const [dialogLoading, setDialogLoading] = useState(false);
   const [publishingKey, setPublishingKey] = useState<string | null>(null);
   const [themeColors, setThemeColors] = useState<string[]>([...MINERVA_COLORS]);
+  const [unlocked, setUnlocked] = useState(false);
+  const [unlockPassword, setUnlockPassword] = useState("");
+  const [unlockError, setUnlockError] = useState("");
+  const [unlocking, setUnlocking] = useState(false);
+  const [newPassword, setNewPassword] = useState("");
+  const [newPassword2, setNewPassword2] = useState("");
 
   const load = useCallback(async () => {
     if (!id) return;
@@ -77,8 +84,30 @@ export function EventDetailPage() {
   }, [id]);
 
   useEffect(() => {
+    if (!id) return;
+    setUnlocked(isEventUnlocked(id));
+  }, [id]);
+
+  useEffect(() => {
     load().catch((e) => setError(e.message));
   }, [load]);
+
+  const tryUnlock = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!id) return;
+    setUnlocking(true);
+    setUnlockError("");
+    try {
+      await api.unlockEvent(id, unlockPassword);
+      markEventUnlocked(id);
+      setUnlocked(true);
+      setUnlockPassword("");
+    } catch (err) {
+      setUnlockError(err instanceof Error ? err.message : "Contraseña incorrecta");
+    } finally {
+      setUnlocking(false);
+    }
+  };
 
   const toggleTest = (testId: string) => {
     setExpandedTests((prev) => ({ ...prev, [testId]: !prev[testId] }));
@@ -155,6 +184,47 @@ export function EventDetailPage() {
     return <div className="empty">{error || "Cargando evento…"}</div>;
   }
 
+  if (!unlocked) {
+    return (
+      <div className="event-lock">
+        <div className="card event-lock-card">
+          <p className="muted" style={{ marginBottom: "0.5rem" }}>
+            <Link to="/">← Eventos</Link>
+          </p>
+          <h2>{event.name}</h2>
+          <p className="muted">
+            Este panel está protegido. Ingresa la contraseña del evento para continuar.
+            {event.date || event.location
+              ? ` (${[event.date, event.location].filter(Boolean).join(" · ")})`
+              : ""}
+          </p>
+          <form className="form" onSubmit={tryUnlock} style={{ marginTop: "1rem" }}>
+            <div className="field">
+              <label>Contraseña</label>
+              <input
+                type="password"
+                value={unlockPassword}
+                onChange={(e) => setUnlockPassword(e.target.value)}
+                autoComplete="current-password"
+                autoFocus
+                required
+              />
+            </div>
+            {unlockError && <div className="alert alert-error">{unlockError}</div>}
+            <button className="btn btn-primary" disabled={unlocking}>
+              {unlocking ? "Verificando…" : "Entrar al panel"}
+            </button>
+          </form>
+          <p style={{ marginTop: "1rem" }}>
+            <a className="btn btn-ghost btn-sm" href={`/tablero/${event.id}`} target="_blank" rel="noreferrer">
+              Ver tablero público (sin contraseña)
+            </a>
+          </p>
+        </div>
+      </div>
+    );
+  }
+
   const points = [...event.timingPoints].sort((a, b) => a.order - b.order);
 
   const saveMeta = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -163,14 +233,32 @@ export function EventDetailPage() {
     const isDefault =
       themeColors.length === 4 &&
       themeColors.every((c, i) => c.toLowerCase() === MINERVA_COLORS[i].toLowerCase());
-    await api.updateEvent(event.id, {
+
+    const payload: Parameters<typeof api.updateEvent>[1] = {
       name: String(fd.get("name") || ""),
       date: String(fd.get("date") || ""),
       location: String(fd.get("location") || ""),
       footerText: String(fd.get("footerText") || ""),
       themeColors: isDefault ? null : themeColors,
-    });
-    setMsg("Evento actualizado");
+    };
+
+    const pw = newPassword.trim();
+    if (pw) {
+      if (!/^[a-zA-Z0-9]+$/.test(pw)) {
+        setError("La nueva contraseña solo puede contener letras y números");
+        return;
+      }
+      if (pw !== newPassword2.trim()) {
+        setError("Las contraseñas nuevas no coinciden");
+        return;
+      }
+      payload.password = pw;
+    }
+
+    await api.updateEvent(event.id, payload);
+    setNewPassword("");
+    setNewPassword2("");
+    setMsg(pw ? "Evento actualizado (contraseña cambiada)" : "Evento actualizado");
     load();
   };
 
@@ -424,6 +512,29 @@ export function EventDetailPage() {
           </div>
 
           <div className="field">
+            <label>Cambiar contraseña del panel</label>
+            <p className="muted" style={{ fontSize: "0.8rem", margin: "0 0 0.4rem" }}>
+              Déjalo vacío para no cambiarla. Solo letras y números.
+            </p>
+            <div className="setup-inline-2">
+              <input
+                type="password"
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+                placeholder="Nueva contraseña"
+                autoComplete="new-password"
+              />
+              <input
+                type="password"
+                value={newPassword2}
+                onChange={(e) => setNewPassword2(e.target.value)}
+                placeholder="Confirmar"
+                autoComplete="new-password"
+              />
+            </div>
+          </div>
+
+          <div className="field">
             <label>Colores del evento</label>
             <p className="muted" style={{ fontSize: "0.8rem", margin: "0 0 0.4rem" }}>
               Se usan en el tablero público y sobre todo en el overlay de transmisión. Si no
@@ -568,6 +679,19 @@ export function EventDetailPage() {
               const testResults = resultsByTest[test.id];
               const showLapsCol =
                 testResults?.rows.some((r) => r.laps != null && r.laps > 0) ?? false;
+              const segmentLabels: string[] = [];
+              if (testResults?.rows) {
+                const seen = new Set<string>();
+                for (const r of testResults.rows) {
+                  for (const s of r.segments || []) {
+                    const key = `${s.from}→${s.to}`;
+                    if (!seen.has(key)) {
+                      seen.add(key);
+                      segmentLabels.push(key);
+                    }
+                  }
+                }
+              }
               const lapExportPartId =
                 testResults?.partId &&
                 test.parts.find((p) => p.id === testResults.partId)?.combinedScoring === "laps"
@@ -880,47 +1004,139 @@ export function EventDetailPage() {
                         </header>
 
                         <p className="muted" style={{ fontSize: "0.78rem", margin: "0 0 0.5rem" }}>
-                          Segmento guardado por prueba (Desde/Hasta). La fusión usa esta configuración
-                          de cada prueba por separado.
+                          Configura cómo se miden los tiempos en esta prueba. La fusión usa esta
+                          configuración de cada prueba por separado.
                         </p>
 
                         <div className="results-controls">
-                          <div className="field">
-                            <label>Desde</label>
+                          <div className="field" style={{ minWidth: "220px" }}>
+                            <label>Tipo de cronometraje</label>
                             <select
-                              value={test.fromPointId || points[0]?.id || ""}
+                              value={test.timingMode || "point_to_point"}
                               onChange={async (e) => {
+                                const timingMode =
+                                  e.target.value === "start_finish_partial"
+                                    ? "start_finish_partial"
+                                    : "point_to_point";
                                 await api.updateTest(event.id, test.id, {
-                                  fromPointId: e.target.value,
+                                  timingMode,
+                                  startFinishPointId:
+                                    test.startFinishPointId || points[0]?.id || null,
+                                  partialPointIds:
+                                    test.partialPointIds && test.partialPointIds.length > 0
+                                      ? test.partialPointIds
+                                      : points[1]?.id
+                                        ? [points[1].id]
+                                        : [],
                                 });
                                 load();
                               }}
                             >
-                              {points.map((p) => (
-                                <option key={p.id} value={p.id}>
-                                  {p.name}
-                                </option>
-                              ))}
+                              <option value="point_to_point">Punto a punto (Desde → Hasta)</option>
+                              <option value="start_finish_partial">
+                                Start/Finish + parcial (sectores + total)
+                              </option>
                             </select>
                           </div>
-                          <div className="field">
-                            <label>Hasta</label>
-                            <select
-                              value={test.toPointId || points[1]?.id || ""}
-                              onChange={async (e) => {
-                                await api.updateTest(event.id, test.id, {
-                                  toPointId: e.target.value,
-                                });
-                                load();
-                              }}
-                            >
-                              {points.map((p) => (
-                                <option key={p.id} value={p.id}>
-                                  {p.name}
-                                </option>
-                              ))}
-                            </select>
-                          </div>
+
+                          {(test.timingMode || "point_to_point") === "point_to_point" ? (
+                            <>
+                              <div className="field">
+                                <label>Desde</label>
+                                <select
+                                  value={test.fromPointId || points[0]?.id || ""}
+                                  onChange={async (e) => {
+                                    await api.updateTest(event.id, test.id, {
+                                      fromPointId: e.target.value,
+                                    });
+                                    load();
+                                  }}
+                                >
+                                  {points.map((p) => (
+                                    <option key={p.id} value={p.id}>
+                                      {p.name}
+                                    </option>
+                                  ))}
+                                </select>
+                              </div>
+                              <div className="field">
+                                <label>Hasta</label>
+                                <select
+                                  value={test.toPointId || points[1]?.id || ""}
+                                  onChange={async (e) => {
+                                    await api.updateTest(event.id, test.id, {
+                                      toPointId: e.target.value,
+                                    });
+                                    load();
+                                  }}
+                                >
+                                  {points.map((p) => (
+                                    <option key={p.id} value={p.id}>
+                                      {p.name}
+                                    </option>
+                                  ))}
+                                </select>
+                              </div>
+                            </>
+                          ) : (
+                            <>
+                              <div className="field">
+                                <label>Start / Finish</label>
+                                <select
+                                  value={
+                                    test.startFinishPointId ||
+                                    test.fromPointId ||
+                                    points[0]?.id ||
+                                    ""
+                                  }
+                                  onChange={async (e) => {
+                                    await api.updateTest(event.id, test.id, {
+                                      startFinishPointId: e.target.value,
+                                    });
+                                    load();
+                                  }}
+                                >
+                                  {points.map((p) => (
+                                    <option key={p.id} value={p.id}>
+                                      {p.name}
+                                    </option>
+                                  ))}
+                                </select>
+                              </div>
+                              <div className="field">
+                                <label>Punto parcial</label>
+                                <select
+                                  value={
+                                    (test.partialPointIds && test.partialPointIds[0]) ||
+                                    test.toPointId ||
+                                    points[1]?.id ||
+                                    ""
+                                  }
+                                  onChange={async (e) => {
+                                    await api.updateTest(event.id, test.id, {
+                                      partialPointIds: e.target.value ? [e.target.value] : [],
+                                    });
+                                    load();
+                                  }}
+                                >
+                                  {points
+                                    .filter(
+                                      (p) =>
+                                        p.id !==
+                                        (test.startFinishPointId ||
+                                          test.fromPointId ||
+                                          points[0]?.id)
+                                    )
+                                    .map((p) => (
+                                      <option key={p.id} value={p.id}>
+                                        {p.name}
+                                      </option>
+                                    ))}
+                                </select>
+                              </div>
+                            </>
+                          )}
+
                           <button
                             className="btn btn-primary results-run-btn"
                             onClick={() => refreshResults(test.id, null)}
@@ -928,6 +1144,14 @@ export function EventDetailPage() {
                             Unificado (mejor tiempo)
                           </button>
                         </div>
+
+                        {(test.timingMode || "point_to_point") === "start_finish_partial" && (
+                          <p className="muted" style={{ fontSize: "0.78rem", margin: "0 0 0.75rem" }}>
+                            En este modo cada piloto debe tener <strong>2 pasadas</strong> en Start/Finish
+                            (salida y llegada) y <strong>1 pasada</strong> en el parcial entre ambas.
+                            El resultado muestra el tiempo Start→Parcial, Parcial→Finish y el total.
+                          </p>
+                        )}
 
                         {testResults?.title && (
                           <p className="results-title">{testResults.title}</p>
@@ -1036,7 +1260,10 @@ export function EventDetailPage() {
                                     <th>Categoría</th>
                                     <th>Liga</th>
                                     {showLapsCol && <th>Vueltas</th>}
-                                    <th>Tiempo</th>
+                                    {segmentLabels.map((label) => (
+                                      <th key={label}>{label}</th>
+                                    ))}
+                                    <th>{segmentLabels.length > 0 ? "Total" : "Tiempo"}</th>
                                     <th>Salida</th>
                                     <th>Pen. tiempo</th>
                                     <th>Pen. pos</th>
@@ -1094,6 +1321,16 @@ export function EventDetailPage() {
                                             )}
                                           </td>
                                         )}
+                                        {segmentLabels.map((label) => {
+                                          const seg = (r.segments || []).find(
+                                            (s) => `${s.from}→${s.to}` === label
+                                          );
+                                          return (
+                                            <td key={label} className="time">
+                                              {r.incomplete ? "—" : seg?.timeFormatted || "—"}
+                                            </td>
+                                          );
+                                        })}
                                         <td className="time">
                                           {r.incomplete ? (
                                             <span className="badge-incomplete" title={r.statusLabel}>

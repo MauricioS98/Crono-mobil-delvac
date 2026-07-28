@@ -179,7 +179,28 @@ export function PublicBoardPage() {
                         {section.rows.some(
                           (r) => !isFusionRow(r) && r.laps != null && r.laps > 0
                         ) && <th>Vueltas</th>}
-                        <th>Tiempo</th>
+                        {(() => {
+                          const labels: string[] = [];
+                          const seen = new Set<string>();
+                          for (const raw of section.rows) {
+                            if (isFusionRow(raw)) continue;
+                            for (const s of raw.segments || []) {
+                              const key = `${s.from}→${s.to}`;
+                              if (!seen.has(key)) {
+                                seen.add(key);
+                                labels.push(key);
+                              }
+                            }
+                          }
+                          return labels.map((label) => <th key={label}>{label}</th>);
+                        })()}
+                        <th>
+                          {section.rows.some(
+                            (r) => !isFusionRow(r) && (r.segments?.length || 0) > 0
+                          )
+                            ? "Total"
+                            : "Tiempo"}
+                        </th>
                         <th>Salida</th>
                       </tr>
                     </thead>
@@ -189,6 +210,18 @@ export function PublicBoardPage() {
                         const showLaps = section.rows.some(
                           (x) => !isFusionRow(x) && x.laps != null && x.laps > 0
                         );
+                        const segLabels: string[] = [];
+                        const seen = new Set<string>();
+                        for (const row of section.rows) {
+                          if (isFusionRow(row)) continue;
+                          for (const s of row.segments || []) {
+                            const key = `${s.from}→${s.to}`;
+                            if (!seen.has(key)) {
+                              seen.add(key);
+                              segLabels.push(key);
+                            }
+                          }
+                        }
                         return (
                           <tr key={`${r.number}-${r.partId || "u"}`}>
                             <td className={r.position <= 3 ? `pos-${r.position}` : ""}>
@@ -207,6 +240,16 @@ export function PublicBoardPage() {
                                     : r.laps}
                               </td>
                             )}
+                            {segLabels.map((label) => {
+                              const seg = (r.segments || []).find(
+                                (s) => `${s.from}→${s.to}` === label
+                              );
+                              return (
+                                <td key={label} className="time">
+                                  {seg?.timeFormatted || "—"}
+                                </td>
+                              );
+                            })}
                             <td className="time">{r.timeFormatted}</td>
                             <td>{r.partName || "—"}</td>
                           </tr>

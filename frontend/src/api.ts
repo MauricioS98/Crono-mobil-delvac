@@ -28,6 +28,13 @@ export const api = {
     }),
   deleteEvent: (id: string) => request<{ ok: boolean }>(`/events/${id}`, { method: "DELETE" }),
 
+  unlockEvent: (id: string, password: string) =>
+    request<{ ok: boolean }>(`/events/${id}/auth`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ password }),
+    }),
+
   updateTimingPoints: (id: string, timingPoints: unknown[]) =>
     request<Event>(`/events/${id}/timing-points`, {
       method: "PUT",
@@ -56,6 +63,9 @@ export const api = {
       showDescriptionInPdf?: boolean;
       fromPointId?: string | null;
       toPointId?: string | null;
+      timingMode?: "point_to_point" | "start_finish_partial";
+      startFinishPointId?: string | null;
+      partialPointIds?: string[];
     }
   ) =>
     request(`/events/${eventId}/tests/${testId}`, {

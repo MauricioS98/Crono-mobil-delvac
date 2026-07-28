@@ -1,9 +1,25 @@
+/** Role of a timing point within a test circuit */
+export type TimingPointRole = "generic" | "start_finish" | "partial" | "start" | "finish";
+
 export interface TimingPoint {
   id: string;
   name: string;
   /** Offset in milliseconds relative to the first timing point (reference) */
   offsetMs: number;
   order: number;
+  /** Optional default role hint for UI (tests can override) */
+  role?: TimingPointRole;
+}
+
+/** How a test measures times across timing points */
+export type TestTimingMode = "point_to_point" | "start_finish_partial";
+
+/** One measured sector inside a start/finish + partial result */
+export interface ResultSegment {
+  from: string;
+  to: string;
+  timeMs: number;
+  timeFormatted: string;
 }
 
 export interface Pilot {
@@ -92,9 +108,18 @@ export interface Test {
   /** Include description in PDF export */
   showDescriptionInPdf: boolean;
   order: number;
-  /** Timing segment for unified results / fusion (point ids) */
+  /**
+   * point_to_point: single Desde→Hasta (default).
+   * start_finish_partial: start/finish point + intermediate partial(s) → sectors + total.
+   */
+  timingMode?: TestTimingMode;
+  /** Timing segment for unified results / fusion (point ids) — point_to_point mode */
   fromPointId?: string | null;
   toPointId?: string | null;
+  /** Start/finish point id when timingMode is start_finish_partial */
+  startFinishPointId?: string | null;
+  /** Intermediate partial point ids when timingMode is start_finish_partial */
+  partialPointIds?: string[];
   parts: TestPart[];
   penalties: PilotPenalty[];
 }
@@ -155,6 +180,11 @@ export interface Event {
   location: string;
   headerImage: string | null;
   footerText: string;
+  /**
+   * Password required to open the management panel.
+   * Never returned by public/list APIs. Existing events without one get "00000".
+   */
+  password: string;
   /** 4 colores del evento: [acento, resaltado, fondo paneles, texto]. null = paleta Minerva Timing */
   themeColors?: string[] | null;
   timingPoints: TimingPoint[];
@@ -199,4 +229,9 @@ export interface ResultRow {
   expectedLaps?: number | null;
   /** True when laps < expected in lap mode */
   lapsIncomplete?: boolean;
+  /**
+   * Sector times when timingMode is start_finish_partial
+   * (e.g. A→B, B→A). Ranking still uses timeMs (= total).
+   */
+  segments?: ResultSegment[];
 }

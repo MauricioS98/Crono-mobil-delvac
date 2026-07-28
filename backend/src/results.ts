@@ -6,6 +6,7 @@ import type {
   Pilot,
   PilotPenalty,
   ResultRow,
+  ResultSegment,
   Test,
   TestPart,
   TimingPoint,
@@ -35,6 +36,22 @@ export function segmentLabelForTest(
   fromOverride?: string,
   toOverride?: string
 ): string {
+  if (test.timingMode === "start_finish_partial") {
+    const points = event.timingPoints;
+    const sfId = test.startFinishPointId || test.fromPointId || points[0]?.id;
+    const sfName = points.find((p) => p.id === sfId)?.name ?? "Start/Finish";
+    const partialIds =
+      test.partialPointIds && test.partialPointIds.length > 0
+        ? test.partialPointIds
+        : test.toPointId
+          ? [test.toPointId]
+          : [];
+    const partialNames = partialIds
+      .map((id) => points.find((p) => p.id === id)?.name)
+      .filter(Boolean);
+    if (partialNames.length === 0) return `${sfName} → parcial → ${sfName}`;
+    return `${sfName} → ${partialNames.join(" → ")} → ${sfName}`;
+  }
   const { fromId, toId } = resolveTestTimingPoints(event, test, fromOverride, toOverride);
   const points = event.timingPoints;
   const fromName = points.find((p) => p.id === fromId)?.name ?? "Desde";
@@ -42,8 +59,11 @@ export function segmentLabelForTest(
   return `${fromName} → ${toName}`;
 }
 
-function pickName(a: string, b?: string): string {
-  return a || b || "";
+function pickName(...names: (string | undefined)[]): string {
+  for (const n of names) {
+    if (n && String(n).trim()) return n;
+  }
+  return "";
 }
 
 function firstRacePassageByPilot(
@@ -337,7 +357,8 @@ function enrich(
   name: string,
   timeMs: number,
   segmentLabel: string,
-  part?: TestPart
+  part?: TestPart,
+  segments?: ResultSegment[]
 ): ResultRow {
   const pilot = pilots.find((p) => normalizeNumber(p.number) === normalizeNumber(number));
   return {
@@ -359,6 +380,7 @@ function enrich(
     missingPilot: !pilot,
     segmentLabel,
     incomplete: false,
+    segments: segments && segments.length > 0 ? segments : undefined,
   };
 }
 
@@ -623,6 +645,11 @@ export function computePartResults(
     return { rows: applyPenalties(rankRaw(rows), test.penalties, scope), scope };
   }
 
+  // Start/Finish + parcial(es): A sale, B parcial, A llega → sectores + total
+  if (test.timingMode === "start_finish_partial") {
+    return computeStartFinishPartial(event, test, part, pilots, scope);
+  }
+
   const fromId = fromPointId ?? points[0]?.id;
   const toId = toPointId ?? points[1]?.id;
   if (!fromId || !toId) {
@@ -645,8 +672,8 @@ export function computePartResults(
 
   const fromByPilot = fromSlot
     ? racePassagesByPilot(fromSlot.parsed)
-    : new Map<string, Passage[]>();
-  const toByPilot = toSlot ? racePassagesByPilot(toSlot.parsed) : new Map<string, Passage[]>();
+    : new Map<string, PassageHit[]>();
+  const toByPilot = toSlot ? racePassagesByPilot(toSlot.parsed) : new Map<string, PassageHit[]>();
 
   if (fromByPilot.size === 0 && toByPilot.size === 0) {
     return {
@@ -756,6 +783,228 @@ export function computePartResults(
   return {
     rows: mergeCompleteAndIncomplete(complete, incomplete, test.penalties, scope),
     warning,
+    scope,
+  };
+}
+
+type PassageHit = { number: string; name: string; tm: number; lap: number | null };
+
+/**
+ * Start/Finish + parcial: el piloto sale en SF, pasa por el(los) parcial(es)
+ * y vuelve a SF. Se reportan sectores (SF→P, P→SF) y el total SF→SF.
+ */
+function computeStartFinishPartial(
+  event: Event,
+  test: Test,
+  part: TestPart,
+  pilots: Pilot[],
+  scope: string
+): ResultsComputation {
+  const points = [...event.timingPoints].sort((a, b) => a.order - b.order);
+  const sfId = test.startFinishPointId || test.fromPointId || points[0]?.id;
+  const partialIds =
+    test.partialPointIds && test.partialPointIds.length > 0
+      ? test.partialPointIds
+      : test.toPointId
+        ? [test.toPointId]
+        : points.filter((p) => p.id !== sfId).map((p) => p.id);
+
+  if (!sfId) {
+    return { rows: [], warning: "Configura el punto Start/Finish de la prueba.", scope };
+  }
+  if (partialIds.length === 0) {
+    return { rows: [], warning: "Configura al menos un punto parcial.", scope };
+  }
+  if (partialIds.includes(sfId)) {
+    return {
+      rows: [],
+      warning: "El punto Start/Finish no puede ser también un parcial.",
+      scope,
+    };
+  }
+
+  const sfPoint = points.find((p) => p.id === sfId);
+  const sfLabel = sfPoint?.name ?? "Start/Finish";
+  const sfSlot = part.csvs.find((c) => c.timingPointId === sfId);
+  if (!sfSlot) {
+    return { rows: [], warning: `Falta cargar el CSV de ${sfLabel} (Start/Finish).`, scope };
+  }
+
+  const partialMeta = partialIds.map((id) => {
+    const point = points.find((p) => p.id === id);
+    const slot = part.csvs.find((c) => c.timingPointId === id);
+    return {
+      id,
+      point,
+      label: point?.name ?? "Parcial",
+      byPilot: slot ? racePassagesByPilot(slot.parsed) : new Map<string, PassageHit[]>(),
+      hasCsv: Boolean(slot),
+    };
+  });
+
+  if (partialMeta.some((p) => !p.hasCsv)) {
+    const missing = partialMeta.filter((p) => !p.hasCsv).map((p) => p.label);
+    return {
+      rows: [],
+      warning: `Falta cargar el CSV de: ${missing.join(", ")}.`,
+      scope,
+    };
+  }
+
+  const sfByPilot = racePassagesByPilot(sfSlot.parsed);
+  const complete: ResultRow[] = [];
+  const incomplete: ResultRow[] = [];
+  let nonPositive = 0;
+
+  const allKeys = new Set<string>([
+    ...sfByPilot.keys(),
+    ...partialMeta.flatMap((p) => [...p.byPilot.keys()]),
+  ]);
+
+  for (const key of allKeys) {
+    const sfList = sfByPilot.get(key) || [];
+    const start = sfList[0];
+    const finish = sfList[1];
+
+    if (!start) {
+      // Solo aparece en parciales
+      const anyPartial = partialMeta.find((p) => (p.byPilot.get(key) || []).length > 0);
+      const hit = anyPartial?.byPilot.get(key)?.[0];
+      if (hit) {
+        incomplete.push(
+          enrichIncomplete(
+            pilots,
+            hit.number,
+            hit.name,
+            "missing_start",
+            sfLabel,
+            anyPartial!.label,
+            part
+          )
+        );
+      }
+      continue;
+    }
+
+    if (!finish) {
+      incomplete.push(
+        enrichIncomplete(
+          pilots,
+          start.number,
+          start.name,
+          "missing_finish",
+          sfLabel,
+          `${sfLabel} (2ª pasada)`,
+          part
+        )
+      );
+      continue;
+    }
+
+    const tStart = correctedTime(start.tm, sfPoint);
+    const tFinish = correctedTime(finish.tm, sfPoint);
+    if (tFinish - tStart <= 0) {
+      nonPositive++;
+      continue;
+    }
+
+    // Collect one hit per partial between start and finish (corrected times)
+    const waypoints: { label: string; t: number; name: string; number: string }[] = [];
+    let missingPartial: string | null = null;
+
+    for (const pm of partialMeta) {
+      const list = pm.byPilot.get(key) || [];
+      const hit = list.find((h) => {
+        const t = correctedTime(h.tm, pm.point);
+        return t > tStart && t < tFinish;
+      });
+      if (!hit) {
+        missingPartial = pm.label;
+        break;
+      }
+      waypoints.push({
+        label: pm.label,
+        t: correctedTime(hit.tm, pm.point),
+        name: hit.name,
+        number: hit.number,
+      });
+    }
+
+    if (missingPartial) {
+      incomplete.push(
+        enrichIncomplete(
+          pilots,
+          start.number,
+          start.name,
+          "missing_finish",
+          sfLabel,
+          missingPartial,
+          part
+        )
+      );
+      continue;
+    }
+
+    waypoints.sort((a, b) => a.t - b.t);
+
+    const path = [
+      { label: sfLabel, t: tStart },
+      ...waypoints.map((w) => ({ label: w.label, t: w.t })),
+      { label: sfLabel, t: tFinish },
+    ];
+
+    const segments: ResultSegment[] = [];
+    let ok = true;
+    for (let i = 0; i < path.length - 1; i++) {
+      const delta = path[i + 1].t - path[i].t;
+      if (delta <= 0) {
+        ok = false;
+        break;
+      }
+      segments.push({
+        from: path[i].label,
+        to: path[i + 1].label,
+        timeMs: delta,
+        timeFormatted: formatMs(delta),
+      });
+    }
+    if (!ok) {
+      nonPositive++;
+      continue;
+    }
+
+    const total = tFinish - tStart;
+    const label = segments.map((s) => `${s.from}→${s.to}`).join(" + ");
+    complete.push(
+      enrich(
+        pilots,
+        start.number,
+        pickName(start.name, finish.name, waypoints[0]?.name),
+        total,
+        `${label} · Total ${sfLabel}→${sfLabel}`,
+        part,
+        segments
+      )
+    );
+  }
+
+  if (complete.length === 0 && incomplete.length === 0) {
+    return {
+      rows: [],
+      warning:
+        nonPositive > 0
+          ? "Los tiempos parciales salieron ≤ 0. Revisa desfases y que cada piloto tenga 2 pasadas en Start/Finish más el parcial intermedio."
+          : "No hay pasadas válidas para el modo Start/Finish + parcial.",
+      scope,
+    };
+  }
+
+  return {
+    rows: mergeCompleteAndIncomplete(complete, incomplete, test.penalties, scope),
+    warning:
+      nonPositive > 0
+        ? `${nonPositive} piloto(s) sin tiempo válido (≤ 0). Revisa desfases / orden de pasadas.`
+        : undefined,
     scope,
   };
 }

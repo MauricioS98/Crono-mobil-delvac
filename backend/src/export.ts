@@ -62,14 +62,20 @@ function timeCells(r: ResultRow, flags: PenaltyFlags): string[] {
   return [r.timeFormatted];
 }
 
-function baseHeaders(withLaps: boolean, flags: PenaltyFlags): string[] {
+function baseHeaders(withLaps: boolean, flags: PenaltyFlags, segmentLabels: string[]): string[] {
   const h = ["Pos", "N°", "Nombre", "Categoría", "Liga"];
   if (withLaps) h.push("Vueltas");
+  for (const label of segmentLabels) h.push(label);
   h.push(...timeHeaders(flags), "Salida", "Segmento");
   return h;
 }
 
-function baseCells(r: ResultRow, withLaps: boolean, flags: PenaltyFlags): (string | number)[] {
+function baseCells(
+  r: ResultRow,
+  withLaps: boolean,
+  flags: PenaltyFlags,
+  segmentLabels: string[]
+): (string | number)[] {
   const cells: (string | number)[] = [
     r.position,
     r.number,
@@ -78,31 +84,45 @@ function baseCells(r: ResultRow, withLaps: boolean, flags: PenaltyFlags): (strin
     r.league || "—",
   ];
   if (withLaps) cells.push(lapsCell(r));
+  for (const label of segmentLabels) {
+    const seg = (r.segments || []).find((s) => `${s.from}→${s.to}` === label);
+    cells.push(seg ? seg.timeFormatted : "—");
+  }
   cells.push(...timeCells(r, flags), r.partName || "—", r.segmentLabel);
   return cells;
+}
+
+function collectSegmentLabels(rows: ResultRow[]): string[] {
+  const seen = new Set<string>();
+  const labels: string[] = [];
+  for (const r of rows) {
+    for (const s of r.segments || []) {
+      const key = `${s.from}→${s.to}`;
+      if (!seen.has(key)) {
+        seen.add(key);
+        labels.push(key);
+      }
+    }
+  }
+  return labels;
 }
 
 export function resultsToCsv(rows: ResultRow[], title: string): string {
   const flags = penaltyFlags(rows);
   const withLaps = hasLapResults(rows);
-  const header = [...baseHeaders(withLaps, flags), ...penaltyHeaders(flags)];
-  const lines = [
-    `# ${title}`,
-    header.join(","),
-    ...rows.map((r) => {
-      const base: (string | number)[] = [
-        r.position,
-        esc(r.number),
-        esc(r.name),
-        esc(r.category || ""),
-        esc(r.league || ""),
-      ];
-      if (withLaps) base.push(lapsCell(r));
-      base.push(...timeCells(r, flags).map(esc), esc(r.partName || ""), esc(r.segmentLabel));
-      const pens = penaltyCells(r, flags).map((c) => (typeof c === "string" ? esc(c) : c));
-      return [...base, ...pens].join(",");
-    }),
-  ];
+  const segmentLabels = collectSegmentLabels(rows);
+  const headers = [...baseHeaders(withLaps, flags, segmentLabels), ...penaltyHeaders(flags)];
+  const lines = [`# ${title}`, headers.join(",")];
+  for (const r of rows) {
+    if (r.incomplete) continue;
+    const cells = [
+      ...baseCells(r, withLaps, flags, segmentLabels).map((c) =>
+        typeof c === "string" ? esc(c) : c
+      ),
+      ...penaltyCells(r, flags).map((c) => (typeof c === "string" ? esc(c) : c)),
+    ];
+    lines.push(cells.join(","));
+  }
   return lines.join("\n");
 }
 
@@ -113,12 +133,13 @@ export async function resultsToExcel(
 ): Promise<Buffer> {
   const flags = penaltyFlags(rows);
   const withLaps = hasLapResults(rows);
+  const segmentLabels = collectSegmentLabels(rows);
   const penHeaders = penaltyHeaders(flags);
   const wb = new ExcelJS.Workbook();
   wb.creator = "Minerva Timing";
   const ws = wb.addWorksheet("Resultados");
 
-  const headers = [...baseHeaders(withLaps, flags), ...penHeaders];
+  const headers = [...baseHeaders(withLaps, flags, segmentLabels), ...penHeaders];
   const colCount = headers.length;
   ws.mergeCells(1, 1, 1, colCount);
   ws.getCell("A1").value = eventName;
@@ -136,7 +157,7 @@ export async function resultsToExcel(
   });
 
   for (const r of rows) {
-    ws.addRow([...baseCells(r, withLaps, flags), ...penaltyCells(r, flags)]);
+    ws.addRow([...baseCells(r, withLaps, flags, segmentLabels), ...penaltyCells(r, flags)]);
   }
 
   const timeWidths = flags.time ? [{ width: 14 }, { width: 14 }] : [{ width: 14 }];

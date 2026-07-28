@@ -8,6 +8,9 @@ export const DATA_ROOT = path.resolve(__dirname, "../../data");
 export const EVENTS_DIR = path.join(DATA_ROOT, "events");
 export const HEADERS_DIR = path.join(DATA_ROOT, "uploads", "headers");
 
+/** Default password for events created before passwords existed */
+export const DEFAULT_EVENT_PASSWORD = "00000";
+
 function ensureDirs() {
   for (const dir of [EVENTS_DIR, HEADERS_DIR]) {
     if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
@@ -20,6 +23,12 @@ function writeJsonAtomic(filePath: string, data: unknown) {
   const tmp = `${filePath}.tmp`;
   fs.writeFileSync(tmp, JSON.stringify(data, null, 2), "utf-8");
   fs.renameSync(tmp, filePath);
+}
+
+/** Strip secrets before sending event data to the client */
+export function publicEvent(event: Event): Omit<Event, "password"> & { hasPassword: boolean } {
+  const { password: _pw, ...rest } = event;
+  return { ...rest, hasPassword: Boolean(event.password) };
 }
 
 export function listEvents(): Event[] {
@@ -51,13 +60,30 @@ export function getEvent(id: string): Event | null {
     })),
     fromPointId: t.fromPointId ?? null,
     toPointId: t.toPointId ?? null,
+    timingMode: t.timingMode === "start_finish_partial" ? "start_finish_partial" : "point_to_point",
+    startFinishPointId: t.startFinishPointId ?? t.fromPointId ?? null,
+    partialPointIds: Array.isArray(t.partialPointIds)
+      ? t.partialPointIds
+      : t.toPointId
+        ? [t.toPointId]
+        : [],
   }));
+
+  // Migrate events created before passwords existed
+  if (!event.password || String(event.password).trim() === "") {
+    event.password = DEFAULT_EVENT_PASSWORD;
+    writeJsonAtomic(file, event);
+  }
+
   return event;
 }
 
 export function saveEvent(event: Event): Event {
   ensureDirs();
   if (!event.pilots) event.pilots = [];
+  if (!event.password || String(event.password).trim() === "") {
+    event.password = DEFAULT_EVENT_PASSWORD;
+  }
   event.updatedAt = new Date().toISOString();
   writeJsonAtomic(path.join(EVENTS_DIR, `${event.id}.json`), event);
   return event;
@@ -82,4 +108,8 @@ export function findPilotByNumber(pilots: Pilot[], number: string): Pilot | unde
 
 export function normalizeNumber(n: string): string {
   return n.replace(/^#/, "").trim().toUpperCase();
+}
+
+export function verifyEventPassword(event: Event, password: string): boolean {
+  return String(password) === String(event.password ?? DEFAULT_EVENT_PASSWORD);
 }

@@ -1,9 +1,21 @@
+export type TimingPointRole = "generic" | "start_finish" | "partial" | "start" | "finish";
+
 export interface TimingPoint {
   id: string;
   name: string;
   offsetMs: number;
   order: number;
   offsetFormatted?: string;
+  role?: TimingPointRole;
+}
+
+export type TestTimingMode = "point_to_point" | "start_finish_partial";
+
+export interface ResultSegment {
+  from: string;
+  to: string;
+  timeMs: number;
+  timeFormatted: string;
 }
 
 export interface Pilot {
@@ -95,8 +107,11 @@ export interface Test {
   description: string;
   showDescriptionInPdf: boolean;
   order: number;
+  timingMode?: TestTimingMode;
   fromPointId?: string | null;
   toPointId?: string | null;
+  startFinishPointId?: string | null;
+  partialPointIds?: string[];
   parts: TestPart[];
   penalties: PilotPenalty[];
 }
@@ -127,6 +142,8 @@ export interface Event {
   location: string;
   headerImage: string | null;
   footerText: string;
+  /** Present only when the API intentionally includes it; normally stripped */
+  password?: string;
   timingPoints: TimingPoint[];
   pilots: Pilot[];
   tests: Test[];
@@ -162,4 +179,5 @@ export interface ResultRow {
   laps?: number;
   expectedLaps?: number | null;
   lapsIncomplete?: boolean;
+  segments?: ResultSegment[];
 }

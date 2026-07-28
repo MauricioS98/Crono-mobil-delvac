@@ -8094,7 +8094,12 @@
           "comment": "TP. 1"
         }
       ],
-      "rankingMode": "time"
+      "rankingMode": "time",
+      "timingMode": "point_to_point",
+      "startFinishPointId": "9811a5b1-b4e6-4f04-b11f-823f01ab7967",
+      "partialPointIds": [
+        "3638cb86-ac36-4036-831e-c389f7518926"
+      ]
     },
     {
       "id": "d23db170-b320-41d0-9935-2ca591ef390c",
@@ -8106,7 +8111,12 @@
       "toPointId": "9811a5b1-b4e6-4f04-b11f-823f01ab7967",
       "parts": [],
       "penalties": [],
-      "rankingMode": "time"
+      "rankingMode": "time",
+      "timingMode": "point_to_point",
+      "startFinishPointId": "3638cb86-ac36-4036-831e-c389f7518926",
+      "partialPointIds": [
+        "9811a5b1-b4e6-4f04-b11f-823f01ab7967"
+      ]
     },
     {
       "id": "b440faeb-a1b2-46c9-a4b9-67ab063f4428",
@@ -8636,7 +8646,12 @@
         }
       ],
       "penalties": [],
-      "rankingMode": "time"
+      "rankingMode": "time",
+      "timingMode": "point_to_point",
+      "startFinishPointId": "3638cb86-ac36-4036-831e-c389f7518926",
+      "partialPointIds": [
+        "9811a5b1-b4e6-4f04-b11f-823f01ab7967"
+      ]
     },
     {
       "id": "6b1538f4-a95e-441c-853a-715a78b2d1a0",
@@ -9038,7 +9053,12 @@
         }
       ],
       "penalties": [],
-      "rankingMode": "arrival"
+      "rankingMode": "arrival",
+      "timingMode": "point_to_point",
+      "startFinishPointId": "9811a5b1-b4e6-4f04-b11f-823f01ab7967",
+      "partialPointIds": [
+        "3638cb86-ac36-4036-831e-c389f7518926"
+      ]
     },
     {
       "id": "38b0143d-5409-4684-9528-bafe00ec0f33",
@@ -9050,7 +9070,12 @@
       "toPointId": "9811a5b1-b4e6-4f04-b11f-823f01ab7967",
       "parts": [],
       "penalties": [],
-      "rankingMode": "time"
+      "rankingMode": "time",
+      "timingMode": "point_to_point",
+      "startFinishPointId": "3638cb86-ac36-4036-831e-c389f7518926",
+      "partialPointIds": [
+        "9811a5b1-b4e6-4f04-b11f-823f01ab7967"
+      ]
     },
     {
       "id": "f17371ac-fbba-4de0-b49a-bfb7689fb207",
@@ -9318,7 +9343,12 @@
         }
       ],
       "penalties": [],
-      "rankingMode": "time"
+      "rankingMode": "time",
+      "timingMode": "point_to_point",
+      "startFinishPointId": "3638cb86-ac36-4036-831e-c389f7518926",
+      "partialPointIds": [
+        "9811a5b1-b4e6-4f04-b11f-823f01ab7967"
+      ]
     },
     {
       "id": "09edfb32-fa25-460e-a41e-fb5f08c2f297",
@@ -9330,7 +9360,12 @@
       "toPointId": "9811a5b1-b4e6-4f04-b11f-823f01ab7967",
       "parts": [],
       "penalties": [],
-      "rankingMode": "time"
+      "rankingMode": "time",
+      "timingMode": "point_to_point",
+      "startFinishPointId": "3638cb86-ac36-4036-831e-c389f7518926",
+      "partialPointIds": [
+        "9811a5b1-b4e6-4f04-b11f-823f01ab7967"
+      ]
     },
     {
       "id": "43bd56c7-de13-4e3c-ba73-bb601dcc7aba",
@@ -9538,7 +9573,12 @@
         }
       ],
       "penalties": [],
-      "rankingMode": "time"
+      "rankingMode": "time",
+      "timingMode": "point_to_point",
+      "startFinishPointId": "3638cb86-ac36-4036-831e-c389f7518926",
+      "partialPointIds": [
+        "9811a5b1-b4e6-4f04-b11f-823f01ab7967"
+      ]
     },
     {
       "id": "bbd41aee-abb6-4af4-87a9-7002f3e9ca19",
@@ -9550,7 +9590,12 @@
       "toPointId": "9811a5b1-b4e6-4f04-b11f-823f01ab7967",
       "parts": [],
       "penalties": [],
-      "rankingMode": "time"
+      "rankingMode": "time",
+      "timingMode": "point_to_point",
+      "startFinishPointId": "3638cb86-ac36-4036-831e-c389f7518926",
+      "partialPointIds": [
+        "9811a5b1-b4e6-4f04-b11f-823f01ab7967"
+      ]
     },
     {
       "id": "9a7f4d6c-da4e-4855-a5a5-975a60cd10eb",
@@ -13058,7 +13103,12 @@
           "comment": "B 1"
         }
       ],
-      "rankingMode": "time"
+      "rankingMode": "time",
+      "timingMode": "point_to_point",
+      "startFinishPointId": "3638cb86-ac36-4036-831e-c389f7518926",
+      "partialPointIds": [
+        "9811a5b1-b4e6-4f04-b11f-823f01ab7967"
+      ]
     },
     {
       "id": "7f963650-e21f-464a-a612-e3a3ca9550c0",
@@ -14643,7 +14693,12 @@
         }
       ],
       "penalties": [],
-      "rankingMode": "time"
+      "rankingMode": "time",
+      "timingMode": "point_to_point",
+      "startFinishPointId": "3638cb86-ac36-4036-831e-c389f7518926",
+      "partialPointIds": [
+        "9811a5b1-b4e6-4f04-b11f-823f01ab7967"
+      ]
     },
     {
       "id": "a7e4be8a-f4cc-40b9-9bf0-1bdfd8e9b635",
@@ -15480,7 +15535,12 @@
           "comment": "T 1 (2)"
         }
       ],
-      "rankingMode": "time"
+      "rankingMode": "time",
+      "timingMode": "point_to_point",
+      "startFinishPointId": "3638cb86-ac36-4036-831e-c389f7518926",
+      "partialPointIds": [
+        "9811a5b1-b4e6-4f04-b11f-823f01ab7967"
+      ]
     },
     {
       "id": "28ad91e9-8319-4160-8731-21836ecd3919",
@@ -15902,7 +15962,12 @@
           "comment": "Curvón"
         }
       ],
-      "rankingMode": "time"
+      "rankingMode": "time",
+      "timingMode": "point_to_point",
+      "startFinishPointId": "3638cb86-ac36-4036-831e-c389f7518926",
+      "partialPointIds": [
+        "9811a5b1-b4e6-4f04-b11f-823f01ab7967"
+      ]
     },
     {
       "id": "ead150f0-d704-44c9-8c49-b0e35904b1b0",
@@ -16192,7 +16257,12 @@
           "comment": "T 1"
         }
       ],
-      "rankingMode": "time"
+      "rankingMode": "time",
+      "timingMode": "point_to_point",
+      "startFinishPointId": "9811a5b1-b4e6-4f04-b11f-823f01ab7967",
+      "partialPointIds": [
+        "3638cb86-ac36-4036-831e-c389f7518926"
+      ]
     },
     {
       "id": "46772641-47ef-4ef1-9ff5-61edbb0569be",
@@ -16385,7 +16455,12 @@
           "combinedScoring": "laps"
         }
       ],
-      "penalties": []
+      "penalties": [],
+      "timingMode": "point_to_point",
+      "startFinishPointId": "3638cb86-ac36-4036-831e-c389f7518926",
+      "partialPointIds": [
+        "9811a5b1-b4e6-4f04-b11f-823f01ab7967"
+      ]
     },
     {
       "id": "e18bf75e-ca48-48bc-823a-d0fc9ad7e11c",
@@ -16674,7 +16749,12 @@
           "combinedScoring": "laps"
         }
       ],
-      "penalties": []
+      "penalties": [],
+      "timingMode": "point_to_point",
+      "startFinishPointId": "3638cb86-ac36-4036-831e-c389f7518926",
+      "partialPointIds": [
+        "9811a5b1-b4e6-4f04-b11f-823f01ab7967"
+      ]
     }
   ],
   "fusions": [],
@@ -16703,5 +16783,6 @@
     "#0055aa",
     "#101020",
     "#ffffff"
-  ]
+  ],
+  "password": "00000"
 }

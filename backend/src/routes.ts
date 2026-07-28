@@ -8,7 +8,10 @@ import {
   getEvent,
   HEADERS_DIR,
   listEvents,
+  publicEvent,
   saveEvent,
+  verifyEventPassword,
+  DEFAULT_EVENT_PASSWORD,
 } from "./storage.js";
 import type {
   Event,
@@ -19,6 +22,7 @@ import type {
   ResultsBoardEntry,
   Test,
   TestPart,
+  TestTimingMode,
   TimingPoint,
 } from "./types.js";
 import { parseOffsetToMs, formatOffset } from "./timeUtils.js";
@@ -54,8 +58,15 @@ function sanitizeThemeColors(value: unknown): string[] | null {
   return colors;
 }
 
-function emptyEvent(body: Partial<Event>): Event {
+function emptyEvent(body: Partial<Event> & { password?: string }): Event {
   const now = new Date().toISOString();
+  const password = String(body.password || "").trim();
+  if (!password) {
+    throw new Error("La contraseña del evento es obligatoria");
+  }
+  if (!/^[a-zA-Z0-9]+$/.test(password)) {
+    throw new Error("La contraseña solo puede contener letras y números");
+  }
   return {
     id: uuid(),
     name: body.name || "Nuevo evento",
@@ -63,10 +74,11 @@ function emptyEvent(body: Partial<Event>): Event {
     location: body.location || "",
     headerImage: null,
     footerText: body.footerText || "Minerva Timing",
+    password,
     themeColors: sanitizeThemeColors(body.themeColors),
     timingPoints: [
-      { id: uuid(), name: "PC A", offsetMs: 0, order: 0 },
-      { id: uuid(), name: "PC B", offsetMs: 0, order: 1 },
+      { id: uuid(), name: "PC A", offsetMs: 0, order: 0, role: "start_finish" },
+      { id: uuid(), name: "PC B", offsetMs: 0, order: 1, role: "partial" },
     ],
     pilots: [],
     tests: [],
@@ -79,37 +91,62 @@ function emptyEvent(body: Partial<Event>): Event {
 
 // ─── Events ───────────────────────────────────────────────
 router.get("/events", (_req, res) => {
-  res.json(listEvents());
+  res.json(listEvents().map(publicEvent));
 });
 
 router.get("/events/:id", (req, res) => {
   const event = getEvent(req.params.id);
   if (!event) return res.status(404).json({ error: "Evento no encontrado" });
-  res.json(event);
+  res.json(publicEvent(event));
 });
 
 router.post("/events", (req, res) => {
-  const event = emptyEvent(req.body || {});
-  saveEvent(event);
-  res.status(201).json(event);
+  try {
+    const event = emptyEvent(req.body || {});
+    saveEvent(event);
+    res.status(201).json(publicEvent(event));
+  } catch (err) {
+    res.status(400).json({ error: err instanceof Error ? err.message : "Error al crear evento" });
+  }
+});
+
+router.post("/events/:id/auth", (req, res) => {
+  const event = getEvent(req.params.id);
+  if (!event) return res.status(404).json({ error: "Evento no encontrado" });
+  const password = String(req.body?.password ?? "");
+  if (!verifyEventPassword(event, password)) {
+    return res.status(401).json({ error: "Contraseña incorrecta" });
+  }
+  res.json({ ok: true });
 });
 
 router.put("/events/:id", (req, res) => {
   const existing = getEvent(req.params.id);
   if (!existing) return res.status(404).json({ error: "Evento no encontrado" });
+
+  let nextPassword = existing.password || DEFAULT_EVENT_PASSWORD;
+  if (req.body.password != null && String(req.body.password).trim() !== "") {
+    const candidate = String(req.body.password).trim();
+    if (!/^[a-zA-Z0-9]+$/.test(candidate)) {
+      return res.status(400).json({ error: "La contraseña solo puede contener letras y números" });
+    }
+    nextPassword = candidate;
+  }
+
   const updated: Event = {
     ...existing,
     name: req.body.name ?? existing.name,
     date: req.body.date ?? existing.date,
     location: req.body.location ?? existing.location,
     footerText: req.body.footerText ?? existing.footerText,
+    password: nextPassword,
     themeColors:
       req.body.themeColors === undefined
         ? existing.themeColors ?? null
         : sanitizeThemeColors(req.body.themeColors),
   };
   saveEvent(updated);
-  res.json(updated);
+  res.json(publicEvent(updated));
 });
 
 router.delete("/events/:id", (req, res) => {
@@ -132,7 +169,7 @@ router.post("/events/:id/header", upload.single("image"), (req, res) => {
   fs.writeFileSync(dest, req.file.buffer);
   event.headerImage = filename;
   saveEvent(event);
-  res.json(event);
+  res.json(publicEvent(event));
 });
 
 // ─── Timing points ────────────────────────────────────────
@@ -149,6 +186,7 @@ router.put("/events/:id/timing-points", (req, res) => {
           ? p.offsetMs
           : parseOffsetToMs(p.offset || "0"),
       order: typeof p.order === "number" ? p.order : i,
+      role: p.role || "generic",
     })
   );
 
@@ -161,7 +199,7 @@ router.put("/events/:id/timing-points", (req, res) => {
   event.timingPoints = points;
   saveEvent(event);
   res.json({
-    ...event,
+    ...publicEvent(event),
     timingPoints: event.timingPoints.map((p) => ({
       ...p,
       offsetFormatted: formatOffset(p.offsetMs),
@@ -180,8 +218,11 @@ router.post("/events/:id/tests", (req, res) => {
     description: req.body.description || "",
     showDescriptionInPdf: Boolean(req.body.showDescriptionInPdf),
     order: event.tests.length,
+    timingMode: "point_to_point",
     fromPointId: event.timingPoints[0]?.id ?? null,
     toPointId: event.timingPoints[1]?.id ?? null,
+    startFinishPointId: event.timingPoints[0]?.id ?? null,
+    partialPointIds: event.timingPoints[1]?.id ? [event.timingPoints[1].id] : [],
     parts: [],
     penalties: [],
   };
@@ -206,9 +247,23 @@ router.put("/events/:id/tests/:testId", (req, res) => {
   if (req.body.toPointId !== undefined) {
     test.toPointId = req.body.toPointId || null;
   }
+  if (req.body.timingMode !== undefined) {
+    const mode: TestTimingMode =
+      req.body.timingMode === "start_finish_partial" ? "start_finish_partial" : "point_to_point";
+    test.timingMode = mode;
+  }
+  if (req.body.startFinishPointId !== undefined) {
+    test.startFinishPointId = req.body.startFinishPointId || null;
+  }
+  if (req.body.partialPointIds !== undefined) {
+    test.partialPointIds = Array.isArray(req.body.partialPointIds)
+      ? req.body.partialPointIds.map(String).filter(Boolean)
+      : [];
+  }
   // Backfill for older events
   if (test.description == null) test.description = "";
   if (test.showDescriptionInPdf == null) test.showDescriptionInPdf = false;
+  if (!test.timingMode) test.timingMode = "point_to_point";
   saveEvent(event);
   res.json(test);
 });
@@ -610,21 +665,22 @@ function feedRows(section: BoardSection) {
     }));
   }
   return (section.rows as ResultRow[]).map((r) => ({
-    position: r.position,
-    number: r.number,
-    name: r.name || "",
-    category: r.category || "",
-    league: r.league || "",
-    laps:
+      position: r.position,
+      number: r.number,
+      name: r.name || "",
+      category: r.category || "",
+      league: r.league || "",
+      laps:
       r.laps == null ? "" : r.expectedLaps != null ? `${r.laps}/${r.expectedLaps}` : String(r.laps),
-    time: r.timeFormatted,
-    timeMs: r.timeMs,
-    rawTime: r.hasPenalty ? r.rawTimeFormatted : "",
-    penalty: r.timePenaltyMs > 0 ? formatOffset(r.timePenaltyMs) : "",
-    comment: r.comment || "",
-    part: r.partName || "",
-    detail: "",
-  }));
+      time: r.timeFormatted,
+      timeMs: r.timeMs,
+      rawTime: r.hasPenalty ? r.rawTimeFormatted : "",
+      penalty: r.timePenaltyMs > 0 ? formatOffset(r.timePenaltyMs) : "",
+      comment: r.comment || "",
+      part: r.partName || "",
+      detail: (r.segments || []).map((s) => `${s.from}→${s.to}=${s.timeFormatted}`).join(" | "),
+      segments: r.segments || [],
+    }));
 }
 
 function selectFeedSections(event: Event, sectionQuery: unknown): BoardSection[] {
