@@ -1,13 +1,15 @@
 import "express-async-errors";
 import express from "express";
 import cors from "cors";
+import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
 import routes from "./routes.js";
 import { HEADERS_DIR } from "./storage.js";
-import { assertDbConnection, pool } from "./db.js";
+import { assertDbConnection, ensureDbSchema, pool } from "./db.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const FRONTEND_DIR = path.resolve(__dirname, "../../frontend/dist");
 const app = express();
 const PORT = Number(process.env.PORT) || 4000;
 
@@ -29,6 +31,16 @@ app.get("/api/health", async (_req, res) => {
   }
 });
 
+if (fs.existsSync(FRONTEND_DIR)) {
+  app.use(express.static(FRONTEND_DIR));
+  app.get("*", (req, res, next) => {
+    if (req.path.startsWith("/api/") || req.path.startsWith("/uploads/")) {
+      return next();
+    }
+    return res.sendFile(path.join(FRONTEND_DIR, "index.html"));
+  });
+}
+
 app.use(
   (
     err: unknown,
@@ -46,6 +58,7 @@ app.use(
 
 async function main() {
   await assertDbConnection();
+  await ensureDbSchema();
   app.listen(PORT, "0.0.0.0", () => {
     console.log(`Minerva Timing API en http://localhost:${PORT} (LAN: 0.0.0.0:${PORT})`);
   });
