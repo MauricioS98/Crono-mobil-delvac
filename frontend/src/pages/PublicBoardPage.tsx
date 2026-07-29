@@ -268,7 +268,7 @@ export function PublicBoardPage() {
     if (!id) return;
     const timer = window.setInterval(() => {
       load().catch(() => undefined);
-    }, 15000);
+    }, 5000);
     return () => window.clearInterval(timer);
   }, [id, load]);
 
@@ -394,8 +394,8 @@ export function PublicBoardPage() {
             por defecto la última publicada), <code>top=20</code> (filas),{" "}
             <code>refresh=5</code> (segundos), <code>gap=0</code> (ocultar la diferencia con
             el líder) y <code>header=0</code> (ocultar título). En los feeds,{" "}
-            <code>?section=2</code> filtra una sola sección. El tablero público pagina de 10
-            en 10 cada {pageSeconds}s (configurable en el panel).
+            <code>?section=2</code> filtra una sola sección. El tablero público se actualiza solo
+            cada 5s y pagina de 10 en 10 cada {pageSeconds}s (configurable en el panel).
           </p>
         </div>
       </details>

@@ -10,6 +10,7 @@ import {
   listEvents,
   publicEvent,
   saveEvent,
+  savePartCsvs,
   verifyEventPassword,
   DEFAULT_EVENT_PASSWORD,
 } from "./storage.js";
@@ -399,6 +400,7 @@ router.post(
     }
 
     await saveEvent(event);
+    await savePartCsvs(part.id, part.csvs);
     res.json({
       part,
       summary: {

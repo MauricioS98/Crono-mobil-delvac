@@ -1,13 +1,9 @@
 import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
-import type { Event, Pilot } from "./types.js";
-import {
-  loadAllEvents,
-  loadEvent,
-  persistEvent,
-  removeEvent,
-} from "./eventsRepo.js";
+import type { Event, PartCsvSlot, Pilot } from "./types.js";
+import { loadAllEvents, loadEvent } from "./eventsRepo.js";
+import { persistEvent, removeEvent, replacePartCsvs } from "./eventsWrite.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 export const DATA_ROOT = path.resolve(__dirname, "../../data");
@@ -17,6 +13,9 @@ export const HEADERS_DIR = path.join(DATA_ROOT, "uploads", "headers");
 /** Default password for events created before passwords existed */
 export const DEFAULT_EVENT_PASSWORD = "00000";
 
+const eventCache = new Map<string, { event: Event; at: number }>();
+const CACHE_TTL_MS = 3000;
+
 function ensureDirs() {
   for (const dir of [EVENTS_DIR, HEADERS_DIR]) {
     if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
@@ -24,6 +23,11 @@ function ensureDirs() {
 }
 
 ensureDirs();
+
+function invalidateEventCache(id?: string) {
+  if (id) eventCache.delete(id);
+  else eventCache.clear();
+}
 
 /** Strip secrets before sending event data to the client */
 export function publicEvent(event: Event): Omit<Event, "password"> & { hasPassword: boolean } {
@@ -74,13 +78,23 @@ function normalizeLoaded(event: Event): Event {
 
 export async function listEvents(): Promise<Event[]> {
   const events = await loadAllEvents();
-  return events.map(normalizeLoaded);
+  return events.map((e) => {
+    const n = normalizeLoaded(e);
+    eventCache.set(n.id, { event: structuredClone(n), at: Date.now() });
+    return n;
+  });
 }
 
 export async function getEvent(id: string): Promise<Event | null> {
+  const hit = eventCache.get(id);
+  if (hit && Date.now() - hit.at < CACHE_TTL_MS) {
+    return structuredClone(hit.event);
+  }
   const event = await loadEvent(id);
   if (!event) return null;
-  return normalizeLoaded(event);
+  const n = normalizeLoaded(event);
+  eventCache.set(id, { event: structuredClone(n), at: Date.now() });
+  return n;
 }
 
 export async function saveEvent(event: Event): Promise<Event> {
@@ -92,11 +106,20 @@ export async function saveEvent(event: Event): Promise<Event> {
   event.updatedAt = new Date().toISOString();
   if (!event.createdAt) event.createdAt = event.updatedAt;
   await persistEvent(event);
+  invalidateEventCache(event.id);
+  eventCache.set(event.id, { event: structuredClone(event), at: Date.now() });
   return event;
+}
+
+/** Persist CSV slots for a part after upload (does not rewrite the whole event). */
+export async function savePartCsvs(partId: string, csvs: PartCsvSlot[]): Promise<void> {
+  await replacePartCsvs(partId, csvs);
+  invalidateEventCache();
 }
 
 export async function deleteEvent(id: string): Promise<boolean> {
   const ok = await removeEvent(id);
+  invalidateEventCache(id);
   if (!ok) return false;
   const header = path.join(HEADERS_DIR, `${id}`);
   for (const ext of [".png", ".jpg", ".jpeg", ".webp", ".gif"]) {
