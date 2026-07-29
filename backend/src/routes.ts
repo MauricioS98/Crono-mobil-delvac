@@ -725,7 +725,10 @@ function selectFeedSections(event: Event, sectionQuery: unknown): BoardSection[]
 
 function setFeedHeaders(res: import("express").Response, contentType: string) {
   res.setHeader("Access-Control-Allow-Origin", "*");
-  res.setHeader("Cache-Control", "no-store");
+  res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate, max-age=0, private");
+  res.setHeader("Pragma", "no-cache");
+  res.setHeader("Expires", "0");
+  res.setHeader("Surrogate-Control", "no-store");
   res.setHeader("Content-Type", contentType);
 }
 
@@ -737,12 +740,111 @@ function xmlEsc(v: string | number): string {
     .replace(/"/g, "&quot;");
 }
 
-router.get("/events/:id/board/feed.json", async (req, res) => {
-  const event = await getEvent(req.params.id);
-  if (!event) return res.status(404).json({ error: "Evento no encontrado" });
-  const sections = selectFeedSections(event, req.query.section);
-  setFeedHeaders(res, "application/json; charset=utf-8");
-  res.json({
+/** Live HTML when ?live=1 or a browser navigates with Accept: text/html. Use ?raw=1 for plain feed. */
+function wantsLiveHtml(req: import("express").Request): boolean {
+  const q = req.query;
+  if (q.raw === "1" || q.raw === "true") return false;
+  if (q.live === "1" || q.live === "true" || (typeof q.live === "string" && /^\d+$/.test(q.live))) {
+    return true;
+  }
+  const accept = String(req.headers.accept || "");
+  if (!accept || accept === "*/*") return false;
+  const htmlIdx = accept.indexOf("text/html");
+  if (htmlIdx < 0) return false;
+  const prefs = ["application/json", "application/xml", "text/xml", "text/csv"]
+    .map((t) => accept.indexOf(t))
+    .filter((i) => i >= 0);
+  const otherIdx = prefs.length ? Math.min(...prefs) : Number.POSITIVE_INFINITY;
+  return htmlIdx < otherIdx;
+}
+
+function liveRefreshSeconds(req: import("express").Request): number {
+  const fromLive = Number(req.query.live);
+  const fromRefresh = Number(req.query.refresh);
+  const n = Number.isFinite(fromRefresh) && fromRefresh > 0 ? fromRefresh : fromLive;
+  if (Number.isFinite(n) && n >= 2 && n <= 120) return Math.floor(n);
+  return 5;
+}
+
+function sendLiveFeedHtml(
+  req: import("express").Request,
+  res: import("express").Response,
+  event: Event,
+  sections: BoardSection[],
+  format: "json" | "csv" | "xml",
+  rawBody: string
+) {
+  const refresh = liveRefreshSeconds(req);
+  const generated = new Date().toISOString();
+  const rawQs = new URLSearchParams();
+  rawQs.set("raw", "1");
+  if (typeof req.query.section === "string" && req.query.section.trim()) {
+    rawQs.set("section", req.query.section.trim());
+  }
+  const rawHref = `?${rawQs.toString()}`;
+
+  const tableBlocks = sections
+    .map((s) => {
+      const rows = feedRows(s)
+        .map(
+          (r) =>
+            `<tr><td>${r.position}</td><td>${xmlEsc(r.number)}</td><td>${xmlEsc(r.name)}</td><td>${xmlEsc(r.league)}</td><td>${xmlEsc(r.time)}</td><td>${xmlEsc(r.rawTime)}</td><td>${xmlEsc(r.penalty)}</td><td>${xmlEsc(r.comment)}</td><td>${xmlEsc(r.part)}</td></tr>`
+        )
+        .join("");
+      return `<section><h2>${xmlEsc(s.title)}</h2><table><thead><tr><th>Pos</th><th>#</th><th>Piloto</th><th>Liga</th><th>Tiempo</th><th>Sin pen.</th><th>Pen.</th><th>Comentario</th><th>Salida</th></tr></thead><tbody>${rows || `<tr><td colspan="9">Sin resultados</td></tr>`}</tbody></table></section>`;
+    })
+    .join("");
+
+  setFeedHeaders(res, "text/html; charset=utf-8");
+  res.send(`<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta http-equiv="refresh" content="${refresh}"/>
+  <meta http-equiv="Cache-Control" content="no-store"/>
+  <title>Feed ${format.toUpperCase()} · ${xmlEsc(event.name)}</title>
+  <style>
+    :root { color-scheme: dark; --bg:#0b0d10; --panel:#14181f; --line:#2a3140; --text:#e8edf5; --muted:#9aa6b8; --accent:#e10600; }
+    * { box-sizing: border-box; }
+    body { margin:0; font:14px/1.45 system-ui,Segoe UI,sans-serif; background:var(--bg); color:var(--text); }
+    header { position:sticky; top:0; z-index:2; display:flex; flex-wrap:wrap; gap:10px 16px; align-items:center; justify-content:space-between; padding:12px 16px; background:rgba(11,13,16,.94); border-bottom:1px solid var(--line); backdrop-filter:blur(8px); }
+    h1 { margin:0; font-size:1.05rem; }
+    .meta { color:var(--muted); font-size:.85rem; }
+    .badge { display:inline-block; padding:2px 8px; border-radius:999px; background:var(--accent); color:#fff; font-size:.75rem; font-weight:700; }
+    a { color:#9ecbff; }
+    main { padding:16px; display:grid; gap:18px; }
+    section { background:var(--panel); border:1px solid var(--line); border-radius:10px; overflow:auto; }
+    h2 { margin:0; padding:12px 14px; font-size:.95rem; border-bottom:1px solid var(--line); }
+    table { width:100%; border-collapse:collapse; min-width:720px; }
+    th, td { padding:8px 10px; border-bottom:1px solid var(--line); text-align:left; white-space:nowrap; }
+    th { color:var(--muted); font-size:.75rem; text-transform:uppercase; letter-spacing:.04em; }
+    details { margin-top:8px; }
+    pre { margin:0; padding:12px; overflow:auto; font:12px/1.4 ui-monospace,Consolas,monospace; color:#c9d4e4; max-height:280px; }
+  </style>
+</head>
+<body>
+  <header>
+    <div>
+      <span class="badge">LIVE ${format.toUpperCase()}</span>
+      <h1>${xmlEsc(event.name)}</h1>
+      <div class="meta">Actualiza cada ${refresh}s · generado ${xmlEsc(generated)}</div>
+    </div>
+    <div class="meta"><a href="${xmlEsc(rawHref)}">Ver ${format.toUpperCase()} crudo</a> (para vMix / sistemas)</div>
+  </header>
+  <main>
+    ${tableBlocks || "<p>Sin secciones en el tablero.</p>"}
+    <details>
+      <summary>Fuente ${format.toUpperCase()}</summary>
+      <pre>${xmlEsc(rawBody)}</pre>
+    </details>
+  </main>
+</body>
+</html>`);
+}
+
+function buildFeedJsonPayload(event: Event, sections: BoardSection[]) {
+  return {
     event: boardEventMeta(event),
     generatedAt: new Date().toISOString(),
     boardPageSeconds: event.boardPageSeconds ?? 10,
@@ -755,14 +857,10 @@ router.get("/events/:id/board/feed.json", async (req, res) => {
       publishedAt: s.entry.publishedAt,
       rows: feedRows(s),
     })),
-  });
-});
+  };
+}
 
-router.get("/events/:id/board/feed.csv", async (req, res) => {
-  const event = await getEvent(req.params.id);
-  if (!event) return res.status(404).json({ error: "Evento no encontrado" });
-  const sections = selectFeedSections(event, req.query.section);
-
+function buildFeedCsv(sections: BoardSection[]): string {
   const escCsv = (v: string | number) => {
     const s = String(v);
     return /[",;\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
@@ -784,15 +882,10 @@ router.get("/events/:id/board/feed.csv", async (req, res) => {
       );
     }
   }
-  setFeedHeaders(res, "text/csv; charset=utf-8");
-  res.send("\uFEFF" + lines.join("\r\n"));
-});
+  return "\uFEFF" + lines.join("\r\n");
+}
 
-router.get("/events/:id/board/feed.xml", async (req, res) => {
-  const event = await getEvent(req.params.id);
-  if (!event) return res.status(404).json({ error: "Evento no encontrado" });
-  const sections = selectFeedSections(event, req.query.section);
-
+function buildFeedXml(event: Event, sections: BoardSection[]): string {
   const parts: string[] = ['<?xml version="1.0" encoding="UTF-8"?>'];
   parts.push(
     `<tablero evento="${xmlEsc(event.name)}" fecha="${xmlEsc(event.date || "")}" generado="${xmlEsc(new Date().toISOString())}">`
@@ -809,8 +902,43 @@ router.get("/events/:id/board/feed.xml", async (req, res) => {
     parts.push("  </seccion>");
   });
   parts.push("</tablero>");
+  return parts.join("\n");
+}
+
+router.get("/events/:id/board/feed.json", async (req, res) => {
+  const event = await getEvent(req.params.id);
+  if (!event) return res.status(404).json({ error: "Evento no encontrado" });
+  const sections = selectFeedSections(event, req.query.section);
+  const payload = buildFeedJsonPayload(event, sections);
+  if (wantsLiveHtml(req)) {
+    return sendLiveFeedHtml(req, res, event, sections, "json", JSON.stringify(payload, null, 2));
+  }
+  setFeedHeaders(res, "application/json; charset=utf-8");
+  res.json(payload);
+});
+
+router.get("/events/:id/board/feed.csv", async (req, res) => {
+  const event = await getEvent(req.params.id);
+  if (!event) return res.status(404).json({ error: "Evento no encontrado" });
+  const sections = selectFeedSections(event, req.query.section);
+  const body = buildFeedCsv(sections);
+  if (wantsLiveHtml(req)) {
+    return sendLiveFeedHtml(req, res, event, sections, "csv", body.replace(/^\uFEFF/, ""));
+  }
+  setFeedHeaders(res, "text/csv; charset=utf-8");
+  res.send(body);
+});
+
+router.get("/events/:id/board/feed.xml", async (req, res) => {
+  const event = await getEvent(req.params.id);
+  if (!event) return res.status(404).json({ error: "Evento no encontrado" });
+  const sections = selectFeedSections(event, req.query.section);
+  const body = buildFeedXml(event, sections);
+  if (wantsLiveHtml(req)) {
+    return sendLiveFeedHtml(req, res, event, sections, "xml", body);
+  }
   setFeedHeaders(res, "application/xml; charset=utf-8");
-  res.send(parts.join("\n"));
+  res.send(body);
 });
 
 router.post("/events/:id/board", async (req, res) => {

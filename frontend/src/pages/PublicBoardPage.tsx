@@ -370,32 +370,47 @@ export function PublicBoardPage() {
         <div className="board-broadcast-body">
           <p>
             Para superponer los resultados sobre la señal de video (OBS / vMix), agrega el
-            overlay como «browser source» con fondo transparente. Los sistemas de gráficos
-            también pueden leer los feeds de datos, que se actualizan en cada consulta.
+            overlay como «browser source» con fondo transparente. En el navegador, los feeds
+            con <code>?live=1</code> se actualizan solos cada 5s. Los sistemas de gráficos
+            deben usar la URL cruda (<code>?raw=1</code>).
           </p>
           <div className="broadcast-url-row">
             <strong>Overlay (OBS/vMix)</strong>
             <code>{`${origin}/overlay/${event.id}`}</code>
           </div>
           <div className="broadcast-url-row">
-            <strong>Feed JSON</strong>
-            <code>{`${origin}/api/events/${event.id}/board/feed.json`}</code>
+            <strong>Feed JSON (vivo)</strong>
+            <code>{`${origin}/api/events/${event.id}/board/feed.json?live=1`}</code>
           </div>
           <div className="broadcast-url-row">
-            <strong>Feed CSV</strong>
-            <code>{`${origin}/api/events/${event.id}/board/feed.csv`}</code>
+            <strong>Feed CSV (vivo)</strong>
+            <code>{`${origin}/api/events/${event.id}/board/feed.csv?live=1`}</code>
           </div>
           <div className="broadcast-url-row">
-            <strong>Feed XML</strong>
-            <code>{`${origin}/api/events/${event.id}/board/feed.xml`}</code>
+            <strong>Feed XML (vivo)</strong>
+            <code>{`${origin}/api/events/${event.id}/board/feed.xml?live=1`}</code>
+          </div>
+          <div className="broadcast-url-row">
+            <strong>JSON crudo (vMix)</strong>
+            <code>{`${origin}/api/events/${event.id}/board/feed.json?raw=1`}</code>
+          </div>
+          <div className="broadcast-url-row">
+            <strong>CSV crudo</strong>
+            <code>{`${origin}/api/events/${event.id}/board/feed.csv?raw=1`}</code>
+          </div>
+          <div className="broadcast-url-row">
+            <strong>XML crudo</strong>
+            <code>{`${origin}/api/events/${event.id}/board/feed.xml?raw=1`}</code>
           </div>
           <p>
             Parámetros del overlay: <code>?section=2</code> (sección por número o id;
             por defecto la última publicada), <code>top=20</code> (filas),{" "}
             <code>refresh=5</code> (segundos), <code>gap=0</code> (ocultar la diferencia con
             el líder) y <code>header=0</code> (ocultar título). En los feeds,{" "}
-            <code>?section=2</code> filtra una sola sección. El tablero público se actualiza solo
-            cada 5s y pagina de 10 en 10 cada {pageSeconds}s (configurable en el panel).
+            <code>?section=2</code> filtra una sección; <code>?live=1</code> o{" "}
+            <code>?refresh=5</code> fuerza la vista viva; <code>?raw=1</code> fuerza JSON/CSV/XML
+            puro. El tablero público se actualiza solo cada 5s y pagina de 10 en 10 cada{" "}
+            {pageSeconds}s (configurable en el panel).
           </p>
         </div>
       </details>
