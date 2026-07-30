@@ -191,6 +191,7 @@ export const api = {
         headerImage: string | null;
         footerText: string;
         boardPageSeconds?: number;
+        overlayVariant?: "classic" | "redbull";
       };
       board: ResultsBoardEntry[];
       sections: {

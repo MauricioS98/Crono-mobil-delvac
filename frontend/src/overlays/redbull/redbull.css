@@ -1,0 +1,221 @@
+/* RedBull standings overlay — 1920×1080 composition, transparent outside art */
+
+@import url("https://fonts.googleapis.com/css2?family=Oswald:wght@600;700&display=swap");
+
+.rb-stage {
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  height: 100vh;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  background: transparent;
+  display: grid;
+  place-items: center;
+}
+
+.rb-panel {
+  position: relative;
+  width: min(100vw, calc(100vh * 16 / 9));
+  height: min(100vh, calc(100vw * 9 / 16));
+  aspect-ratio: 16 / 9;
+  opacity: 0;
+  transform: scale(0.95);
+  transition:
+    opacity 400ms cubic-bezier(0.22, 1, 0.36, 1),
+    transform 400ms cubic-bezier(0.22, 1, 0.36, 1);
+  will-change: opacity, transform;
+}
+
+.rb-panel--in {
+  opacity: 1;
+  transform: scale(1);
+}
+
+.rb-layer {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: fill;
+  pointer-events: none;
+  user-select: none;
+}
+
+.rb-logo,
+.rb-title {
+  opacity: 0;
+  animation: rb-fade-in 320ms cubic-bezier(0.22, 1, 0.36, 1) 280ms forwards;
+}
+
+.rb-section-label {
+  position: absolute;
+  left: 32.2%;
+  top: 33.2%;
+  width: 30%;
+  color: rgba(255, 255, 255, 0.55);
+  font-family: Oswald, "Arial Narrow", sans-serif;
+  font-size: clamp(10px, 1.1vw, 16px);
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  opacity: 0;
+  animation: rb-fade-in 320ms cubic-bezier(0.22, 1, 0.36, 1) 320ms forwards;
+  pointer-events: none;
+}
+
+/* Row stack: art area ≈ x 31.7%–68.3%, y 35%–82% of 1080p frame */
+.rb-rows {
+  position: absolute;
+  left: 31.7%;
+  top: 34.8%;
+  width: 36.6%;
+  height: 47%;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  gap: 0.55%;
+  z-index: 2;
+}
+
+.rb-row {
+  position: relative;
+  flex: 0 0 9.2%;
+  min-height: 0;
+  opacity: 0;
+  transform: translateX(-20px);
+  transition:
+    opacity 220ms cubic-bezier(0.22, 1, 0.36, 1),
+    transform 220ms cubic-bezier(0.22, 1, 0.36, 1);
+  will-change: opacity, transform;
+}
+
+.rb-row--in {
+  opacity: 1;
+  transform: translateX(0);
+}
+
+.rb-row--out {
+  opacity: 0;
+  transform: translateX(12px);
+  transition:
+    opacity 240ms cubic-bezier(0.4, 0, 1, 1),
+    transform 240ms cubic-bezier(0.4, 0, 1, 1);
+}
+
+.rb-row-bg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: fill;
+  pointer-events: none;
+}
+
+.rb-row-pos {
+  position: absolute;
+  left: 1.6%;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 5.5%;
+  text-align: center;
+  font-family: Oswald, "Arial Narrow", sans-serif;
+  font-weight: 700;
+  font-size: clamp(11px, 1.35vw, 22px);
+  line-height: 1;
+  color: #fff;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.45);
+  z-index: 1;
+}
+
+.rb-row-name {
+  position: absolute;
+  left: 8.5%;
+  top: 8%;
+  bottom: 10%;
+  width: 54%;
+  display: flex;
+  align-items: center;
+  overflow: hidden;
+  z-index: 1;
+}
+
+.rb-row-art {
+  height: 100%;
+  width: auto;
+  max-width: 100%;
+  object-fit: contain;
+  object-position: left center;
+  pointer-events: none;
+}
+
+.rb-row-name-fallback {
+  font-family: Oswald, "Arial Narrow", sans-serif;
+  font-weight: 700;
+  font-size: clamp(10px, 1.2vw, 18px);
+  letter-spacing: 0.04em;
+  color: #fff;
+  text-transform: uppercase;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  /* slight grit via multi-shadow (no extra assets) */
+  text-shadow:
+    0 0 1px rgba(0, 0, 0, 0.8),
+    0.5px 0.5px 0 rgba(0, 0, 0, 0.35);
+}
+
+.rb-row-timing {
+  position: absolute;
+  right: 2%;
+  top: 0;
+  bottom: 0;
+  width: 32%;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  justify-content: center;
+  gap: 0;
+  padding-right: 2%;
+  z-index: 1;
+  font-family: Oswald, "Arial Narrow", sans-serif;
+  color: #fff;
+}
+
+.rb-row-time {
+  font-weight: 700;
+  font-size: clamp(10px, 1.15vw, 18px);
+  line-height: 1.05;
+  letter-spacing: 0.02em;
+  font-variant-numeric: tabular-nums;
+}
+
+.rb-row-gap {
+  font-weight: 600;
+  font-size: clamp(8px, 0.85vw, 13px);
+  line-height: 1.05;
+  opacity: 0.85;
+  font-variant-numeric: tabular-nums;
+}
+
+.rb-error {
+  color: #fff;
+  font-family: Oswald, sans-serif;
+  font-size: 1.25rem;
+  padding: 1rem 1.25rem;
+  background: rgba(10, 20, 50, 0.85);
+  border: 1px solid rgba(255, 255, 255, 0.35);
+}
+
+@keyframes rb-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}

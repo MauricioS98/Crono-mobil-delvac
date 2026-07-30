@@ -27,6 +27,8 @@ CREATE TABLE events (
   theme_colors        TEXT[] NULL,                 -- 4 hex o NULL = paleta Minerva
   board_page_seconds  INTEGER NOT NULL DEFAULT 10
                         CHECK (board_page_seconds BETWEEN 3 AND 120),
+  overlay_variant     TEXT NOT NULL DEFAULT 'classic'
+                        CHECK (overlay_variant IN ('classic', 'redbull')),
   created_at          TIMESTAMPTZ NOT NULL DEFAULT now(),
   updated_at          TIMESTAMPTZ NOT NULL DEFAULT now()
 );

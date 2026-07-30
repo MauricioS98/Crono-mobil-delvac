@@ -57,10 +57,26 @@ export async function ensureDbSchema(): Promise<void> {
   const existing = await pool.query<{ events_table: string | null }>(
     "SELECT to_regclass('public.events')::text AS events_table"
   );
-  if (existing.rows[0]?.events_table) return;
+  if (!existing.rows[0]?.events_table) {
+    const schemaPath = path.resolve(__dirname, "../../db/01_schema.sql");
+    const schema = fs.readFileSync(schemaPath, "utf8");
+    await pool.query(schema);
+    console.log("Esquema PostgreSQL inicializado");
+    return;
+  }
 
-  const schemaPath = path.resolve(__dirname, "../../db/01_schema.sql");
-  const schema = fs.readFileSync(schemaPath, "utf8");
-  await pool.query(schema);
-  console.log("Esquema PostgreSQL inicializado");
+  // Incremental migrations for existing databases
+  const col = await pool.query<{ attname: string }>(
+    `SELECT a.attname
+     FROM pg_attribute a
+     JOIN pg_class c ON a.attrelid = c.oid
+     JOIN pg_namespace n ON c.relnamespace = n.oid
+     WHERE n.nspname = 'public' AND c.relname = 'events'
+       AND a.attname = 'overlay_variant' AND NOT a.attisdropped`
+  );
+  if (!col.rows[0]) {
+    const migPath = path.resolve(__dirname, "../../db/03_overlay_variant.sql");
+    await pool.query(fs.readFileSync(migPath, "utf8"));
+    console.log("Migración overlay_variant aplicada");
+  }
 }

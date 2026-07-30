@@ -246,6 +246,7 @@ export function EventDetailPage() {
         120,
         Math.max(3, Math.round(Number(fd.get("boardPageSeconds")) || 10))
       ),
+      overlayVariant: fd.get("overlayVariant") === "redbull" ? "redbull" : "classic",
       themeColors: isDefault ? null : themeColors,
     };
 
@@ -559,6 +560,38 @@ export function EventDetailPage() {
               overlay.
             </p>
           </div>
+          <fieldset className="field overlay-variant-field">
+            <legend>Overlay de transmisión</legend>
+            <p className="muted" style={{ fontSize: "0.8rem", margin: "0 0 0.55rem" }}>
+              Elige qué gráfico usa la URL <code>/overlay/{event.id}</code> (OBS / vMix).
+            </p>
+            <div className="overlay-variant-options" key={`ov-${event.id}-${event.updatedAt}`}>
+              <label className="overlay-variant-option">
+                <input
+                  type="radio"
+                  name="overlayVariant"
+                  value="classic"
+                  defaultChecked={event.overlayVariant !== "redbull"}
+                />
+                <span>
+                  <strong>Overlay actual</strong>
+                  <small>Torre Minerva (classic)</small>
+                </span>
+              </label>
+              <label className="overlay-variant-option">
+                <input
+                  type="radio"
+                  name="overlayVariant"
+                  value="redbull"
+                  defaultChecked={event.overlayVariant === "redbull"}
+                />
+                <span>
+                  <strong>Overlay RedBull</strong>
+                  <small>Pieza gráfica + animación de filas</small>
+                </span>
+              </label>
+            </div>
+          </fieldset>
 
           <div className="field">
             <label>Cambiar contraseña del panel</label>

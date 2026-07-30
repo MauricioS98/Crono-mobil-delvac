@@ -204,6 +204,8 @@ export interface Event {
    * Default 10. Overlay is unaffected.
    */
   boardPageSeconds?: number;
+  /** Broadcast overlay style: classic Minerva tower or RedBull graphic pack */
+  overlayVariant?: "classic" | "redbull";
   createdAt: string;
   updatedAt: string;
 }

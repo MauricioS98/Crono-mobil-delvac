@@ -153,6 +153,8 @@ export interface Event {
   resultsBoard?: ResultsBoardEntry[];
   /** Segundos entre cambios de página en el tablero público (10 pilotos/página) */
   boardPageSeconds?: number;
+  /** Overlay de transmisión: torre Minerva o paquete gráfico RedBull */
+  overlayVariant?: "classic" | "redbull";
   /** 4 colores del evento: [acento, resaltado, fondo paneles, texto]. null = paleta Minerva Timing */
   themeColors?: string[] | null;
   createdAt: string;

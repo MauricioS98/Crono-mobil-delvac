@@ -41,6 +41,8 @@ function mapEventRow(row: Record<string, unknown>): Omit<
     password: String(row.password),
     themeColors: (row.theme_colors as string[] | null) ?? null,
     boardPageSeconds: Number(row.board_page_seconds ?? 10),
+    overlayVariant:
+      String(row.overlay_variant || "classic") === "redbull" ? "redbull" : "classic",
     createdAt: new Date(String(row.created_at)).toISOString(),
     updatedAt: new Date(String(row.updated_at)).toISOString(),
   };

@@ -130,8 +130,8 @@ export async function persistEvent(event: Event): Promise<Event> {
       client,
       `INSERT INTO events (
         id, name, event_date, location, header_image, footer_text, password,
-        theme_colors, board_page_seconds, created_at, updated_at
-      ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10::timestamptz,$11::timestamptz)
+        theme_colors, board_page_seconds, overlay_variant, created_at, updated_at
+      ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11::timestamptz,$12::timestamptz)
       ON CONFLICT (id) DO UPDATE SET
         name = EXCLUDED.name,
         event_date = EXCLUDED.event_date,
@@ -141,6 +141,7 @@ export async function persistEvent(event: Event): Promise<Event> {
         password = EXCLUDED.password,
         theme_colors = EXCLUDED.theme_colors,
         board_page_seconds = EXCLUDED.board_page_seconds,
+        overlay_variant = EXCLUDED.overlay_variant,
         updated_at = EXCLUDED.updated_at`,
       [
         event.id,
@@ -152,6 +153,7 @@ export async function persistEvent(event: Event): Promise<Event> {
         event.password,
         theme,
         Math.min(120, Math.max(3, Math.round(event.boardPageSeconds ?? 10))),
+        event.overlayVariant === "redbull" ? "redbull" : "classic",
         event.createdAt,
         event.updatedAt,
       ]

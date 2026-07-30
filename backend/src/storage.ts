@@ -50,6 +50,8 @@ function normalizeLoaded(event: Event): Event {
       Math.max(3, Math.round(Number(event.boardPageSeconds)))
     );
   }
+  event.overlayVariant =
+    event.overlayVariant === "redbull" ? "redbull" : "classic";
   event.tests = (event.tests || []).map((t) => ({
     ...t,
     description: t.description ?? "",
