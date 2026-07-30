@@ -457,11 +457,26 @@ export function EventDetailPage() {
         part.combinedMode
       );
       const summary = res.summary as { uniquePilots: number; flags: { type: string; label: string }[] };
+      const updatedPart = res.part as TestPart;
+      // Patch local state — avoid full event reload (heavy with large CSVs on Render)
+      setEvent((prev) => {
+        if (!prev) return prev;
+        return {
+          ...prev,
+          tests: prev.tests.map((t) =>
+            t.id !== testId
+              ? t
+              : {
+                  ...t,
+                  parts: t.parts.map((p) => (p.id === part.id ? { ...p, ...updatedPart } : p)),
+                }
+          ),
+        };
+      });
       setMsg(
         `CSV cargado: ${summary.uniquePilots} pilotos en carrera` +
           (summary.flags?.length ? ` · Banderas: ${summary.flags.map((f) => f.label).join(", ")}` : "")
       );
-      await load();
     } catch (e) {
       setError(e instanceof Error ? e.message : "Error al subir CSV");
     }

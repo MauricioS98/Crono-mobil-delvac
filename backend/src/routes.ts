@@ -10,7 +10,7 @@ import {
   listEvents,
   publicEvent,
   saveEvent,
-  savePartCsvs,
+  savePartCsvSlot,
   verifyEventPassword,
   DEFAULT_EVENT_PASSWORD,
 } from "./storage.js";
@@ -403,15 +403,29 @@ router.post(
     else part.csvs.push(slot);
 
     // Auto-detect combined mode if lap times present and only one file
+    let metaChanged = false;
     if (part.csvs.length === 1) {
       const hasLaps = parsed.racePassages.some((p) => p.lapTimeMs != null && p.lapTimeMs > 0);
-      if (hasLaps && req.body.combinedMode === "true") {
+      if (hasLaps && req.body.combinedMode === "true" && !part.combinedMode) {
         part.combinedMode = true;
+        metaChanged = true;
       }
     }
 
-    await saveEvent(event);
-    await savePartCsvs(part.id, part.csvs);
+    // Fast path: only rewrite this slot (+ optional part meta). Skip full event persist.
+    await savePartCsvSlot(
+      event.id,
+      part.id,
+      slot,
+      metaChanged
+        ? {
+            combinedMode: part.combinedMode,
+            combinedScoring: part.combinedScoring ?? null,
+            expectedLaps: part.expectedLaps ?? null,
+          }
+        : undefined
+    );
+
     res.json({
       part,
       summary: {

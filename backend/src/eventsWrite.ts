@@ -13,7 +13,7 @@ function uuidList(ids: string[]): string[] {
   return ids;
 }
 
-/** Batch-insert passages (much faster on Render / remote PG). */
+/** Single-round-trip insert of all passages (UNNEST) — critical on Render latency. */
 async function insertPassagesBatch(
   client: Q,
   uploadId: string,
@@ -21,97 +21,177 @@ async function insertPassagesBatch(
   racePassages: Passage[]
 ) {
   if (!passages.length) return;
-  const raceKeys = new Set(
-    (racePassages || []).map((r) => `${r.rowIndex}|${r.number}|${r.tmPasosMs}`)
-  );
 
-  const chunkSize = 100;
-  for (let i = 0; i < passages.length; i += chunkSize) {
-    const chunk = passages.slice(i, i + chunkSize);
-    const values: unknown[] = [];
-    const rowsSql: string[] = [];
-    let p = 1;
-    for (const pass of chunk) {
-      const key = `${pass.rowIndex}|${pass.number}|${pass.tmPasosMs}`;
-      const isRace =
-        raceKeys.has(key) ||
-        (racePassages || []).some(
-          (r) =>
-            r.rowIndex === pass.rowIndex && String(r.number) === String(pass.number)
-        );
-      rowsSql.push(
-        `($${p++},$${p++},$${p++},$${p++},$${p++},$${p++},$${p++},$${p++},$${p++},$${p++},$${p++},$${p++})`
-      );
-      values.push(
-        uploadId,
-        pass.number || "",
-        pass.name || "",
-        pass.tmPasosMs || 0,
-        pass.tmPasosRaw || "",
-        pass.lapTimeMs,
-        pass.lapTimeRaw || "",
-        pass.lapsCount,
-        pass.elapsedMs,
-        pass.clase || "",
-        pass.rowIndex || 0,
-        isRace
-      );
-    }
-    await q(
-      client,
-      `INSERT INTO csv_passages (
-        csv_upload_id, number, name, tm_pasos_ms, tm_pasos_raw,
-        lap_time_ms, lap_time_raw, laps_count, elapsed_ms, clase, row_index, is_race
-      ) VALUES ${rowsSql.join(",")}`,
-      values
-    );
+  const raceKeys = new Set<string>();
+  const raceByRowNum = new Set<string>();
+  for (const r of racePassages || []) {
+    const row = r.rowIndex ?? 0;
+    const num = String(r.number ?? "");
+    raceKeys.add(`${row}|${num}|${r.tmPasosMs ?? 0}`);
+    raceByRowNum.add(`${row}|${num}`);
   }
+
+  const uploadIds: string[] = [];
+  const numbers: string[] = [];
+  const names: string[] = [];
+  const tmPasosMs: number[] = [];
+  const tmPasosRaw: string[] = [];
+  const lapTimeMs: (number | null)[] = [];
+  const lapTimeRaw: string[] = [];
+  const lapsCount: (number | null)[] = [];
+  const elapsedMs: (number | null)[] = [];
+  const clases: string[] = [];
+  const rowIndexes: number[] = [];
+  const isRaceFlags: boolean[] = [];
+
+  for (const pass of passages) {
+    const row = pass.rowIndex ?? 0;
+    const num = String(pass.number ?? "");
+    const key = `${row}|${num}|${pass.tmPasosMs ?? 0}`;
+    const isRace = raceKeys.has(key) || raceByRowNum.has(`${row}|${num}`);
+    uploadIds.push(uploadId);
+    numbers.push(pass.number || "");
+    names.push(pass.name || "");
+    tmPasosMs.push(pass.tmPasosMs || 0);
+    tmPasosRaw.push(pass.tmPasosRaw || "");
+    lapTimeMs.push(pass.lapTimeMs ?? null);
+    lapTimeRaw.push(pass.lapTimeRaw || "");
+    lapsCount.push(pass.lapsCount ?? null);
+    elapsedMs.push(pass.elapsedMs ?? null);
+    clases.push(pass.clase || "");
+    rowIndexes.push(row);
+    isRaceFlags.push(isRace);
+  }
+
+  await q(
+    client,
+    `INSERT INTO csv_passages (
+      csv_upload_id, number, name, tm_pasos_ms, tm_pasos_raw,
+      lap_time_ms, lap_time_raw, laps_count, elapsed_ms, clase, row_index, is_race
+    )
+    SELECT * FROM UNNEST(
+      $1::uuid[], $2::text[], $3::text[], $4::bigint[], $5::text[],
+      $6::bigint[], $7::text[], $8::int[], $9::bigint[], $10::text[], $11::int[], $12::boolean[]
+    )`,
+    [
+      uploadIds,
+      numbers,
+      names,
+      tmPasosMs,
+      tmPasosRaw,
+      lapTimeMs,
+      lapTimeRaw,
+      lapsCount,
+      elapsedMs,
+      clases,
+      rowIndexes,
+      isRaceFlags,
+    ]
+  );
+}
+
+async function insertFlagsBatch(
+  client: Q,
+  uploadId: string,
+  flags: { type?: string; tmPasosMs?: number; tmPasosRaw?: string; label?: string; rowIndex?: number }[]
+) {
+  if (!flags.length) return;
+  const uploadIds = flags.map(() => uploadId);
+  const types = flags.map((f) => f.type || "other");
+  const tms = flags.map((f) => f.tmPasosMs || 0);
+  const raws = flags.map((f) => f.tmPasosRaw || "");
+  const labels = flags.map((f) => f.label || "");
+  const rows = flags.map((f) => f.rowIndex || 0);
+  await q(
+    client,
+    `INSERT INTO csv_flags (
+      csv_upload_id, flag_type, tm_pasos_ms, tm_pasos_raw, label, row_index
+    )
+    SELECT * FROM UNNEST(
+      $1::uuid[], $2::text[], $3::bigint[], $4::text[], $5::text[], $6::int[]
+    )`,
+    [uploadIds, types, tms, raws, labels, rows]
+  );
+}
+
+async function writeCsvSlot(client: Q, partId: string, slot: PartCsvSlot): Promise<void> {
+  const uploadId = randomUUID();
+  await q(
+    client,
+    `INSERT INTO csv_uploads (id, part_id, timing_point_id, filename, uploaded_at)
+     VALUES ($1,$2,$3,$4, now())`,
+    [uploadId, partId, slot.timingPointId, slot.filename]
+  );
+  const parsed = slot.parsed || {
+    filename: slot.filename,
+    passages: [],
+    racePassages: [],
+    flags: [],
+  };
+  await insertPassagesBatch(
+    client,
+    uploadId,
+    parsed.passages || [],
+    parsed.racePassages || []
+  );
+  await insertFlagsBatch(client, uploadId, parsed.flags || []);
 }
 
 /**
- * Replace CSV slots for one part only (used on upload).
- * Does not rewrite the rest of the event.
+ * Replace a single CSV slot (timing point) for a part.
+ * Does NOT rewrite sibling slots — important when ARCO + CAJONES are uploaded separately.
+ */
+export async function upsertPartCsvSlot(partId: string, slot: PartCsvSlot): Promise<void> {
+  await withTransaction(async (client) => {
+    await q(
+      client,
+      `DELETE FROM csv_uploads WHERE part_id = $1 AND timing_point_id IS NOT DISTINCT FROM $2`,
+      [partId, slot.timingPointId]
+    );
+    await writeCsvSlot(client, partId, slot);
+  });
+}
+
+/** Update combined-mode flags without a full event persist. */
+export async function updatePartCsvMeta(
+  partId: string,
+  meta: {
+    combinedMode?: boolean;
+    combinedScoring?: string | null;
+    expectedLaps?: number | null;
+  }
+): Promise<void> {
+  const sets: string[] = [];
+  const params: unknown[] = [];
+  let i = 1;
+  if (meta.combinedMode !== undefined) {
+    sets.push(`combined_mode = $${i++}`);
+    params.push(Boolean(meta.combinedMode));
+  }
+  if (meta.combinedScoring !== undefined) {
+    sets.push(`combined_scoring = $${i++}`);
+    params.push(meta.combinedScoring);
+  }
+  if (meta.expectedLaps !== undefined) {
+    sets.push(`expected_laps = $${i++}`);
+    params.push(meta.expectedLaps);
+  }
+  if (!sets.length) return;
+  params.push(partId);
+  await pool.query(
+    `UPDATE test_parts SET ${sets.join(", ")} WHERE id = $${i}`,
+    params
+  );
+}
+
+/**
+ * Replace all CSV slots for one part (used when clearing/rebuilding a part).
  */
 export async function replacePartCsvs(partId: string, csvs: PartCsvSlot[]): Promise<void> {
   await withTransaction(async (client) => {
     await q(client, `DELETE FROM csv_uploads WHERE part_id = $1`, [partId]);
-
     for (const slot of csvs || []) {
-      const uploadId = randomUUID();
-      await q(
-        client,
-        `INSERT INTO csv_uploads (id, part_id, timing_point_id, filename, uploaded_at)
-         VALUES ($1,$2,$3,$4, now())`,
-        [uploadId, partId, slot.timingPointId, slot.filename]
-      );
-      const parsed = slot.parsed || {
-        filename: slot.filename,
-        passages: [],
-        racePassages: [],
-        flags: [],
-      };
-      await insertPassagesBatch(
-        client,
-        uploadId,
-        parsed.passages || [],
-        parsed.racePassages || []
-      );
-      for (const fl of parsed.flags || []) {
-        await q(
-          client,
-          `INSERT INTO csv_flags (
-            csv_upload_id, flag_type, tm_pasos_ms, tm_pasos_raw, label, row_index
-          ) VALUES ($1,$2,$3,$4,$5,$6)`,
-          [
-            uploadId,
-            fl.type || "other",
-            fl.tmPasosMs || 0,
-            fl.tmPasosRaw || "",
-            fl.label || "",
-            fl.rowIndex || 0,
-          ]
-        );
-      }
+      await writeCsvSlot(client, partId, slot);
     }
   });
 }

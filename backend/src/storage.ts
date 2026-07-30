@@ -3,7 +3,13 @@ import path from "path";
 import { fileURLToPath } from "url";
 import type { Event, PartCsvSlot, Pilot } from "./types.js";
 import { loadAllEvents, loadEvent } from "./eventsRepo.js";
-import { persistEvent, removeEvent, replacePartCsvs } from "./eventsWrite.js";
+import {
+  persistEvent,
+  removeEvent,
+  replacePartCsvs,
+  updatePartCsvMeta,
+  upsertPartCsvSlot,
+} from "./eventsWrite.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 export const DATA_ROOT = path.resolve(__dirname, "../../data");
@@ -117,6 +123,24 @@ export async function saveEvent(event: Event): Promise<Event> {
 export async function savePartCsvs(partId: string, csvs: PartCsvSlot[]): Promise<void> {
   await replacePartCsvs(partId, csvs);
   invalidateEventCache();
+}
+
+/** Persist a single CSV slot (fast path for uploads on Render). */
+export async function savePartCsvSlot(
+  eventId: string,
+  partId: string,
+  slot: import("./types.js").PartCsvSlot,
+  partMeta?: {
+    combinedMode?: boolean;
+    combinedScoring?: string | null;
+    expectedLaps?: number | null;
+  }
+): Promise<void> {
+  if (partMeta) {
+    await updatePartCsvMeta(partId, partMeta);
+  }
+  await upsertPartCsvSlot(partId, slot);
+  invalidateEventCache(eventId);
 }
 
 export async function deleteEvent(id: string): Promise<boolean> {
