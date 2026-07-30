@@ -81,6 +81,17 @@ function contentSig(rows: ViewRow[]): string {
   return rows.map((r) => `${r.key}:${r.position}:${r.time}:${r.gap}:${r.name}`).join(";");
 }
 
+/** Show prueba name; drop salida / resultado suffixes from board titles. */
+function displayTestName(title: string): string {
+  return String(title || "")
+    .replace(/\s*[—–|-]\s*Resultado.*$/i, "")
+    .replace(/\s*[—–|-]\s*Salida\s*\d*.*$/i, "")
+    .replace(/\s*\(\s*Salida\s*\d*\s*\)\s*$/i, "")
+    .trim();
+}
+
+type LogoPhase = "idle" | "phase1" | "phase2" | "phase3" | "done";
+
 export function RedBullOverlay({
   error,
   section,
@@ -95,10 +106,18 @@ export function RedBullOverlay({
     return toViewRows(sliced, showGap, leaderMs);
   }, [section, showGap, top]);
 
+  const testName = useMemo(
+    () => displayTestName(section?.title || ""),
+    [section?.title]
+  );
+
   const pageCount = Math.max(1, Math.ceil(allRows.length / PAGE_SIZE) || 1);
   const [page, setPage] = useState(0);
   const [exiting, setExiting] = useState(false);
   const [panelIn, setPanelIn] = useState(false);
+  const [logoPhase, setLogoPhase] = useState<LogoPhase>("idle");
+  const [headersIn, setHeadersIn] = useState(false);
+  const [rowsReady, setRowsReady] = useState(false);
   const [animGen, setAnimGen] = useState(0);
   const pageRef = useRef(0);
 
@@ -117,6 +136,33 @@ export function RedBullOverlay({
     const t = window.setTimeout(() => setPanelIn(true), 40);
     return () => window.clearTimeout(t);
   }, []);
+
+  // Logo cinematic sequence → title/test name → rows
+  useEffect(() => {
+    if (!showHeader) {
+      setLogoPhase("done");
+      setHeadersIn(true);
+      setRowsReady(true);
+      return;
+    }
+    const timers: number[] = [];
+    timers.push(window.setTimeout(() => setLogoPhase("phase1"), 80));
+    timers.push(window.setTimeout(() => setLogoPhase("phase2"), 80 + 300));
+    timers.push(window.setTimeout(() => setLogoPhase("phase3"), 80 + 300 + 80));
+    timers.push(
+      window.setTimeout(() => {
+        setLogoPhase("done");
+        setHeadersIn(true);
+      }, 80 + 300 + 420)
+    );
+    timers.push(
+      window.setTimeout(() => {
+        setRowsReady(true);
+        setAnimGen((g) => g + 1);
+      }, 80 + 300 + 420 + 280)
+    );
+    return () => timers.forEach((id) => window.clearTimeout(id));
+  }, [showHeader]);
 
   // Initial / in-place sync (no re-stagger when membership unchanged)
   useEffect(() => {
@@ -137,7 +183,7 @@ export function RedBullOverlay({
 
   // Auto-paginate
   useEffect(() => {
-    if (pageCount <= 1 || exiting || displayRows.length === 0) return;
+    if (!rowsReady || pageCount <= 1 || exiting || displayRows.length === 0) return;
 
     const buildMs = displayRows.length * ROW_STAGGER_MS + ROW_ENTER_MS;
     let swapTimer: number | null = null;
@@ -159,7 +205,7 @@ export function RedBullOverlay({
       window.clearTimeout(hold);
       if (swapTimer != null) window.clearTimeout(swapTimer);
     };
-  }, [pageCount, safePage, animGen, allRows, displayRows.length, exiting]);
+  }, [pageCount, safePage, animGen, allRows, displayRows.length, exiting, rowsReady]);
 
   useEffect(() => {
     if (page >= pageCount) {
@@ -182,31 +228,76 @@ export function RedBullOverlay({
 
   const animKey = `${safePage}-${animGen}`;
 
+  const logoClasses = [
+    "rb-logo-stack",
+    logoPhase !== "idle" ? "rb-logo--phase1" : "",
+    logoPhase === "phase2" || logoPhase === "phase3" || logoPhase === "done"
+      ? "rb-logo--phase2"
+      : "",
+    logoPhase === "phase3" || logoPhase === "done" ? "rb-logo--phase3" : "",
+    logoPhase === "done" ? "rb-logo--done" : "",
+  ]
+    .filter(Boolean)
+    .join(" ");
+
   return (
     <div className="rb-stage">
-      <div className={`rb-panel${panelIn ? " rb-panel--in" : ""}`}>
+      <div
+        className={`rb-panel${panelIn ? " rb-panel--in" : ""}${headersIn ? " rb-panel--headers-in" : ""}`}
+      >
         <img className="rb-layer rb-fondo" src={RB_ASSETS.fondo} alt="" draggable={false} />
         {showHeader && (
           <>
-            <img className="rb-layer rb-logo" src={RB_ASSETS.logo} alt="" draggable={false} />
+            <div className={logoClasses}>
+              <img
+                className="rb-logo-layer rb-logo-base"
+                src={RB_ASSETS.logoBase}
+                alt=""
+                draggable={false}
+              />
+              <div className="rb-logo-urbano-mask">
+                <img
+                  className="rb-logo-layer"
+                  src={RB_ASSETS.logoUrbano}
+                  alt=""
+                  draggable={false}
+                />
+              </div>
+              <img
+                className="rb-logo-layer rb-logo-moto"
+                src={RB_ASSETS.logoMoto}
+                alt=""
+                draggable={false}
+              />
+              <img
+                className="rb-logo-layer rb-logo-redbull"
+                src={RB_ASSETS.logoRedbull}
+                alt=""
+                draggable={false}
+              />
+            </div>
             <img className="rb-layer rb-title" src={RB_ASSETS.title} alt="" draggable={false} />
-            <div className="rb-section-label">{section.title}</div>
+            {testName ? <div className="rb-section-label">{testName}</div> : null}
           </>
         )}
-        <div className="rb-rows" aria-label="Tabla de posiciones">
-          {displayRows.map((r, i) => (
-            <PositionRow
-              key={r.key}
-              position={r.position}
-              number={r.number}
-              name={r.name}
-              time={r.time}
-              gap={r.gap}
-              enterIndex={i}
-              animKey={animKey}
-              exiting={exiting}
-            />
-          ))}
+        <div
+          className={`rb-rows${rowsReady ? "" : " rb-rows--hold"}`}
+          aria-label="Tabla de posiciones"
+        >
+          {rowsReady &&
+            displayRows.map((r, i) => (
+              <PositionRow
+                key={r.key}
+                position={r.position}
+                number={r.number}
+                name={r.name}
+                time={r.time}
+                gap={r.gap}
+                enterIndex={i}
+                animKey={animKey}
+                exiting={exiting}
+              />
+            ))}
         </div>
       </div>
     </div>

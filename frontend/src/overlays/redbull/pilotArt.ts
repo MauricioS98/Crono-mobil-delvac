@@ -61,6 +61,10 @@ export function pilotArtCandidates(number: string, name: string): string[] {
 export const RB_ASSETS = {
   fondo: `${ASSET_BASE}/fondo.png`,
   logo: `${ASSET_BASE}/logo.png`,
+  logoRedbull: `${ASSET_BASE}/logo-redbull.png`,
+  logoBase: `${ASSET_BASE}/logo-base.png`,
+  logoMoto: `${ASSET_BASE}/logo-moto.png`,
+  logoUrbano: `${ASSET_BASE}/logo-urbano.png`,
   title: `${ASSET_BASE}/title.png`,
   row: `${ASSET_BASE}/row.png`,
 } as const;
