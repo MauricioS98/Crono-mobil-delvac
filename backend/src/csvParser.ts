@@ -40,6 +40,26 @@ function parseCsvLine(line: string): string[] {
   return result;
 }
 
+/**
+ * Some exports wrap each row as a single CSV field:
+ *   `"#,""N°"",""Nombre"",..."`
+ * After one unwrap pass that becomes a normal CSV line:
+ *   `#,\"N°\",\"Nombre\",...`
+ */
+function unwrapCsvLine(line: string): string {
+  const trimmed = line.trim();
+  if (!trimmed.startsWith('"') || !trimmed.includes('""')) return trimmed;
+  const once = parseCsvLine(trimmed);
+  if (once.length === 1 && /,(?:"|N|Tm|#)/i.test(once[0])) {
+    return once[0];
+  }
+  return trimmed;
+}
+
+function parseCsvRow(line: string): string[] {
+  return parseCsvLine(unwrapCsvLine(line)).map((h) => h.trim());
+}
+
 function findCol(headers: string[], ...names: string[]): number {
   const normalized = headers.map((h) =>
     h.replace(/^\uFEFF/, "").trim().toLowerCase().normalize("NFD").replace(/\p{M}/gu, "")
@@ -114,7 +134,7 @@ export function parseTimingCsv(content: string, filename: string): ParsedCsv {
     return { filename, passages: [], flags: [], racePassages: [] };
   }
 
-  const headers = parseCsvLine(lines[0]).map((h) => h.trim());
+  const headers = parseCsvRow(lines[0]);
   const colNum = findCol(headers, "n°", "nº", "no", "numero", "#");
   // Prefer exact N° over the leading "#" column
   const colNumero =
@@ -148,7 +168,7 @@ export function parseTimingCsv(content: string, filename: string): ParsedCsv {
   const flags: FlagEvent[] = [];
 
   for (let i = 1; i < lines.length; i++) {
-    const cols = parseCsvLine(lines[i]);
+    const cols = parseCsvRow(lines[i]);
     const numero = (cols[colNumero] ?? "").trim();
     const nombre = colNombre >= 0 ? (cols[colNombre] ?? "").trim() : "";
     const tmRaw = (cols[colTm] ?? "").trim();
