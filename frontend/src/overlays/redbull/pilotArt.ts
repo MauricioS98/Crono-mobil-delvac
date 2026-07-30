@@ -11,38 +11,51 @@ export function normalizePilotSlug(name: string): string {
 }
 
 /**
- * Known art filenames that don't match a naive name slug
- * (typos / truncated export names from the design pack).
+ * Roster art index from RedBull pack (filename number ↔ pilot).
+ * Used when dorsal in timing doesn't match, or as secondary lookup by name.
  */
-const NAME_ALIASES: Record<string, string> = {
-  cesarcorrea: "esarcorrea",
-  esarcorrea: "esarcorrea",
+const NAME_TO_ART_NUMBER: Record<string, number> = {
+  andrestoro: 1,
+  benjaminherrera: 2,
+  camiloherrera: 3,
+  danielpalacio: 4,
+  didiergoirand: 5,
+  eduardobanvega: 6,
+  edwargarzon: 7,
+  johanbarreto: 8,
+  juancamilodorado: 9,
+  juandavidolaya: 10,
+  martinchica: 11,
+  martinvarela: 12,
+  pabloancizar: 13,
+  pachoalvarez: 14,
+  cesarcorrea: 15,
+  esarcorrea: 15,
+  tomasjaramillo: 16,
+  santiagosanchez: 17,
+  samuelruiz: 18,
 };
 
-/** Dorsal → art slug once PNGs are renamed to `{number}.png`. */
+/** Dorsal / name → candidate PNG URLs (`{n}.png`). */
 export function pilotArtCandidates(number: string, name: string): string[] {
   const dorsal = String(number || "").trim();
   const slug = normalizePilotSlug(name);
-  const alias = NAME_ALIASES[slug];
+  const byName = NAME_TO_ART_NUMBER[slug];
   const out: string[] = [];
-  if (dorsal) {
-    out.push(`${ASSET_BASE}/pilots/${dorsal}.png`);
-    // zero-padded variants (01, 001)
-    if (/^\d+$/.test(dorsal)) {
-      out.push(`${ASSET_BASE}/pilots/${dorsal.padStart(2, "0")}.png`);
-      out.push(`${ASSET_BASE}/pilots/${dorsal.padStart(3, "0")}.png`);
-    }
-  }
-  if (slug) out.push(`${ASSET_BASE}/pilots/${slug}.png`);
-  if (alias) out.push(`${ASSET_BASE}/pilots/${alias}.png`);
-  return [...new Set(out)];
-}
 
-export function posBadgeUrl(position: number): string | null {
-  if (position >= 1 && position <= 16) {
-    return `${ASSET_BASE}/pos/${position}.png`;
+  const pushNum = (n: string | number) => {
+    const s = String(n).trim();
+    if (!s) return;
+    out.push(`${ASSET_BASE}/pilots/${s}.png`);
+  };
+
+  if (dorsal) pushNum(dorsal);
+  if (byName != null) pushNum(byName);
+  if (dorsal && /^\d+$/.test(dorsal)) {
+    pushNum(dorsal.padStart(2, "0"));
   }
-  return null;
+
+  return [...new Set(out)];
 }
 
 export const RB_ASSETS = {
