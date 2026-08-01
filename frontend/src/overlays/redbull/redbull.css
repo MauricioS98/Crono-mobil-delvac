@@ -42,23 +42,29 @@
   height: 1140px;
 }
 
+/*
+ * Shift brand + title + standings left so the 3 time traps clear the rider art.
+ * Amount tuned against the empty left margin of the board.
+ */
 .rb-panel.rb-panel--splits .rb-fondo,
 .rb-panel.rb-panel--splits .rb-logo-stack,
-.rb-panel.rb-panel--splits .rb-logo-layer,
 .rb-panel.rb-panel--splits .rb-title {
+  inset: auto;
+  left: -140px;
+  top: 0;
   width: 2100px;
   height: 1180px;
   max-width: none;
 }
 
 .rb-panel.rb-panel--splits .rb-section-label {
-  left: 1068px;
+  left: 928px; /* 1068 - 140 */
   width: 342px;
   top: 400px;
 }
 
 .rb-panel.rb-panel--splits .rb-rows {
-  left: 666px;
+  left: 526px; /* 666 - 140 */
   top: 448px;
 }
 
