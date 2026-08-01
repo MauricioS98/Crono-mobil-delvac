@@ -121,7 +121,7 @@
   /* Title art ≈ x 975–1287 → center at 1131px */
   left: 975px;
   width: 312px;
-  top: 348px;
+  top: 365px;
   z-index: 5;
   margin: 0;
   padding: 0;
@@ -154,9 +154,9 @@
 .rb-rows {
   position: absolute;
   left: 608px;
-  top: 395px;
+  top: 408px;
   width: 704px;
-  height: 470px;
+  height: 455px;
   display: flex;
   flex-direction: column;
   justify-content: flex-start;
@@ -207,7 +207,19 @@
   pointer-events: none;
 }
 
-/* Number inside left pocket of the bar (white on dark blue square) */
+/* Art badge (exact “1” with top bar) — covers left pocket fully */
+.rb-row-pos-img {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 48px;
+  height: 100%;
+  object-fit: fill;
+  pointer-events: none;
+  z-index: 2;
+}
+
+/* Fallback text for position > 16 */
 .rb-row-pos {
   position: absolute;
   left: 0;
@@ -221,9 +233,9 @@
   padding: 0;
   background: none;
   border: none;
-  font-family: Oswald, "Arial Narrow", Impact, sans-serif;
-  font-weight: 700;
-  font-size: 20px;
+  font-family: "Arial Black", Impact, Oswald, sans-serif;
+  font-weight: 900;
+  font-size: 26px;
   line-height: 1;
   color: #fff;
   font-variant-numeric: tabular-nums;

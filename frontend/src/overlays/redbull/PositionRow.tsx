@@ -20,6 +20,13 @@ export type PositionRowProps = {
 
 const STAGGER_MS = 100;
 
+function posBadgeSrc(position: number): string | null {
+  if (position >= 1 && position <= 16) {
+    return `/overlays/redbull/pos-num/${position}.png`;
+  }
+  return null;
+}
+
 export function PositionRow({
   position,
   number,
@@ -36,10 +43,16 @@ export function PositionRow({
   const candidates = pilotArtCandidates(number, name);
   const [artIdx, setArtIdx] = useState(0);
   const [entered, setEntered] = useState(false);
+  const [badgeFailed, setBadgeFailed] = useState(false);
+  const badgeSrc = !badgeFailed ? posBadgeSrc(position) : null;
 
   useEffect(() => {
     setArtIdx(0);
   }, [number, name]);
+
+  useEffect(() => {
+    setBadgeFailed(false);
+  }, [position]);
 
   useEffect(() => {
     setEntered(false);
@@ -67,7 +80,17 @@ export function PositionRow({
       data-number={number}
     >
       <img className="rb-row-bg" src="/overlays/redbull/row.png" alt="" draggable={false} />
-      <span className="rb-row-pos">{position}</span>
+      {badgeSrc ? (
+        <img
+          className="rb-row-pos-img"
+          src={badgeSrc}
+          alt={String(position)}
+          draggable={false}
+          onError={() => setBadgeFailed(true)}
+        />
+      ) : (
+        <span className="rb-row-pos">{position}</span>
+      )}
       <div className="rb-row-name">
         {artSrc ? (
           <img

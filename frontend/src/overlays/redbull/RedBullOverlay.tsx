@@ -30,7 +30,7 @@ function formatGap(ms: number): string {
   return `+${min}:${sec.toFixed(3).padStart(6, "0")}`;
 }
 
-const PAGE_SIZE = 10;
+const PAGE_SIZE = 9;
 const PAGE_HOLD_MS = 2000;
 const ROW_STAGGER_MS = 100;
 const ROW_ENTER_MS = 220;
@@ -181,9 +181,9 @@ export function RedBullOverlay({
     setAnimGen((g) => g + 1);
   }, [liveMemberKey, liveContentSig, livePageRows, exiting]);
 
-  // Auto-paginate
+  // Auto-paginate — do NOT depend on `exiting` or cleanup will cancel the page swap
   useEffect(() => {
-    if (!rowsReady || pageCount <= 1 || exiting || displayRows.length === 0) return;
+    if (!rowsReady || pageCount <= 1 || displayRows.length === 0) return;
 
     const buildMs = displayRows.length * ROW_STAGGER_MS + ROW_ENTER_MS;
     let swapTimer: number | null = null;
@@ -205,7 +205,7 @@ export function RedBullOverlay({
       window.clearTimeout(hold);
       if (swapTimer != null) window.clearTimeout(swapTimer);
     };
-  }, [pageCount, safePage, animGen, allRows, displayRows.length, exiting, rowsReady]);
+  }, [pageCount, safePage, animGen, allRows, displayRows.length, rowsReady]);
 
   useEffect(() => {
     if (page >= pageCount) {
