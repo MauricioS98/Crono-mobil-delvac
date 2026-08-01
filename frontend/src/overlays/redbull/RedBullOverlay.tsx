@@ -64,6 +64,9 @@ function buildTraps(r: ResultRow | FusionRow): { time: string; label: string }[]
     time: s.timeFormatted,
     label: TRAYECTO_LABELS[i] || `${i + 1}º trayecto`,
   }));
+  // Live / unfinished: only show sectors we have (e.g. 1er trayecto), no Total yet
+  const inProgress = /en curso/i.test(r.segmentLabel || "");
+  if (inProgress) return partials;
   return [...partials, { time: rowTimeFormatted(r), label: "Total" }];
 }
 

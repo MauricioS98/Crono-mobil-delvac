@@ -122,10 +122,25 @@ export const api = {
     fd.append("file", file);
     fd.append("timingPointId", timingPointId);
     if (combinedMode) fd.append("combinedMode", "true");
-    return request<{ part: unknown; summary: unknown }>(
-      `/events/${eventId}/tests/${testId}/parts/${partId}/csv`,
-      { method: "POST", body: fd }
-    );
+    return request<{
+      slot: {
+        timingPointId: string;
+        filename: string;
+        parsed: unknown;
+      };
+      partMeta: {
+        id: string;
+        name: string;
+        order: number;
+        combinedMode: boolean;
+        combinedScoring?: "time" | "laps";
+        expectedLaps: number | null;
+      };
+      summary: unknown;
+    }>(`/events/${eventId}/tests/${testId}/parts/${partId}/csv`, {
+      method: "POST",
+      body: fd,
+    });
   },
 
   getResults: (eventId: string, testId: string, params: Record<string, string | undefined>) => {

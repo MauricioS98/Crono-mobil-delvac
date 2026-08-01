@@ -2,7 +2,7 @@ import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
 import type { Event, PartCsvSlot, Pilot } from "./types.js";
-import { loadAllEvents, loadEvent } from "./eventsRepo.js";
+import { getPartUploadContext, loadAllEvents, loadEvent } from "./eventsRepo.js";
 import {
   persistEvent,
   removeEvent,
@@ -10,6 +10,8 @@ import {
   updatePartCsvMeta,
   upsertPartCsvSlot,
 } from "./eventsWrite.js";
+
+export { getPartUploadContext };
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 export const DATA_ROOT = path.resolve(__dirname, "../../data");
@@ -125,11 +127,46 @@ export async function savePartCsvs(partId: string, csvs: PartCsvSlot[]): Promise
   invalidateEventCache();
 }
 
+/** Patch cached event with one CSV slot instead of forcing a full DB reload. */
+function patchEventCacheCsvSlot(
+  eventId: string,
+  partId: string,
+  slot: PartCsvSlot,
+  partMeta?: {
+    combinedMode?: boolean;
+    combinedScoring?: string | null;
+    expectedLaps?: number | null;
+  }
+): void {
+  const hit = eventCache.get(eventId);
+  if (!hit) return;
+  for (const test of hit.event.tests || []) {
+    const part = (test.parts || []).find((p) => p.id === partId);
+    if (!part) continue;
+    const idx = part.csvs.findIndex((c) => c.timingPointId === slot.timingPointId);
+    if (idx >= 0) part.csvs[idx] = slot;
+    else part.csvs.push(slot);
+    if (partMeta) {
+      if (partMeta.combinedMode !== undefined) part.combinedMode = Boolean(partMeta.combinedMode);
+      if (partMeta.combinedScoring !== undefined) {
+        part.combinedScoring =
+          partMeta.combinedScoring === "laps" || partMeta.combinedScoring === "time"
+            ? partMeta.combinedScoring
+            : part.combinedScoring;
+      }
+      if (partMeta.expectedLaps !== undefined) part.expectedLaps = partMeta.expectedLaps;
+    }
+    hit.event.updatedAt = new Date().toISOString();
+    hit.at = Date.now();
+    return;
+  }
+}
+
 /** Persist a single CSV slot (fast path for uploads on Render). */
 export async function savePartCsvSlot(
   eventId: string,
   partId: string,
-  slot: import("./types.js").PartCsvSlot,
+  slot: PartCsvSlot,
   partMeta?: {
     combinedMode?: boolean;
     combinedScoring?: string | null;
@@ -140,7 +177,10 @@ export async function savePartCsvSlot(
     await updatePartCsvMeta(partId, partMeta);
   }
   await upsertPartCsvSlot(partId, slot);
-  invalidateEventCache(eventId);
+  // Prefer in-place cache patch — invalidating forces a multi-MB reload of all CSVs.
+  if (eventCache.has(eventId)) {
+    patchEventCacheCsvSlot(eventId, partId, slot, partMeta);
+  }
 }
 
 export async function deleteEvent(id: string): Promise<boolean> {

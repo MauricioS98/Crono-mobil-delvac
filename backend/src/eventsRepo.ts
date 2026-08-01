@@ -363,6 +363,65 @@ export async function loadEvent(id: string): Promise<Event | null> {
   };
 }
 
+/** Lightweight part lookup for CSV upload — skips loading passages. */
+export async function getPartUploadContext(
+  eventId: string,
+  testId: string,
+  partId: string
+): Promise<{
+  eventId: string;
+  testId: string;
+  partId: string;
+  partName: string;
+  partOrder: number;
+  combinedMode: boolean;
+  combinedScoring: "time" | "laps" | undefined;
+  expectedLaps: number | null;
+  firstTimingPointId: string | null;
+} | null> {
+  const r = await q(
+    pool,
+    `SELECT
+       e.id AS event_id,
+       t.id AS test_id,
+       p.id AS part_id,
+       p.name AS part_name,
+       p.sort_order AS part_order,
+       p.combined_mode,
+       p.combined_scoring,
+       p.expected_laps,
+       (
+         SELECT tp.id
+         FROM timing_points tp
+         WHERE tp.event_id = e.id
+         ORDER BY tp.sort_order
+         LIMIT 1
+       ) AS first_timing_point_id
+     FROM test_parts p
+     INNER JOIN tests t ON t.id = p.test_id
+     INNER JOIN events e ON e.id = t.event_id
+     WHERE e.id = $1 AND t.id = $2 AND p.id = $3`,
+    [eventId, testId, partId]
+  );
+  const row = r.rows[0];
+  if (!row) return null;
+  return {
+    eventId: String(row.event_id),
+    testId: String(row.test_id),
+    partId: String(row.part_id),
+    partName: String(row.part_name || ""),
+    partOrder: Number(row.part_order || 0),
+    combinedMode: Boolean(row.combined_mode),
+    combinedScoring: row.combined_scoring
+      ? (String(row.combined_scoring) as "time" | "laps")
+      : undefined,
+    expectedLaps: row.expected_laps == null ? null : Number(row.expected_laps),
+    firstTimingPointId: row.first_timing_point_id
+      ? String(row.first_timing_point_id)
+      : null,
+  };
+}
+
 export async function listEventIds(): Promise<string[]> {
   const r = await q<{ id: string }>(
     pool,

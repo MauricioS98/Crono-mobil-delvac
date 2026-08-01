@@ -5,7 +5,7 @@ import { ConfirmDialog, type ConfirmDialogState } from "../components/ConfirmDia
 import { canDeletePart, canDeleteTest } from "../lib/deleteGuards";
 import { isEventUnlocked, markEventUnlocked } from "../lib/eventAuth";
 import { matchesPilotSearch } from "../lib/search";
-import type { Event, ResultRow, Test, TestPart, TimingPoint } from "../types";
+import type { Event, PartCsvSlot, ResultRow, Test, TestPart, TimingPoint } from "../types";
 import { MINERVA_COLORS, THEME_COLOR_LABELS, resolveThemeColors } from "../theme";
 import { EventPilotsSection } from "./EventPilotsSection";
 import { EventFusionPanel } from "./EventFusionPanel";
@@ -457,8 +457,9 @@ export function EventDetailPage() {
         part.combinedMode
       );
       const summary = res.summary as { uniquePilots: number; flags: { type: string; label: string }[] };
-      const updatedPart = res.part as TestPart;
-      // Patch local state — avoid full event reload (heavy with large CSVs on Render)
+      const slot = res.slot as PartCsvSlot;
+      const meta = res.partMeta;
+      // Merge only the uploaded slot — never replace sibling CSVs or reload the event.
       setEvent((prev) => {
         if (!prev) return prev;
         return {
@@ -468,7 +469,20 @@ export function EventDetailPage() {
               ? t
               : {
                   ...t,
-                  parts: t.parts.map((p) => (p.id === part.id ? { ...p, ...updatedPart } : p)),
+                  parts: t.parts.map((p) => {
+                    if (p.id !== part.id) return p;
+                    const csvs = [...(p.csvs || [])];
+                    const idx = csvs.findIndex((c) => c.timingPointId === slot.timingPointId);
+                    if (idx >= 0) csvs[idx] = slot;
+                    else csvs.push(slot);
+                    return {
+                      ...p,
+                      combinedMode: meta.combinedMode,
+                      combinedScoring: meta.combinedScoring ?? p.combinedScoring,
+                      expectedLaps: meta.expectedLaps ?? p.expectedLaps,
+                      csvs,
+                    };
+                  }),
                 }
           ),
         };
@@ -1552,6 +1566,11 @@ export function EventDetailPage() {
                                           ) : (
                                             <>
                                               {r.timeFormatted}
+                                              {r.statusLabel === "En curso" && (
+                                                <div className="muted" style={{ fontSize: "0.72rem" }}>
+                                                  En curso
+                                                </div>
+                                              )}
                                               {r.timePenaltyMs > 0 && (
                                                 <div className="muted" style={{ fontSize: "0.75rem" }}>
                                                   base {r.rawTimeFormatted}

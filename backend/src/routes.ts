@@ -6,6 +6,7 @@ import { v4 as uuid } from "uuid";
 import {
   deleteEvent,
   getEvent,
+  getPartUploadContext,
   HEADERS_DIR,
   listEvents,
   publicEvent,
@@ -373,61 +374,77 @@ router.post(
   "/events/:id/tests/:testId/parts/:partId/csv",
   upload.single("file"),
   async (req, res) => {
-    const event = await getEvent(req.params.id);
-    if (!event) return res.status(404).json({ error: "Evento no encontrado" });
-    const test = getTest(event, req.params.testId);
-    if (!test) return res.status(404).json({ error: "Prueba no encontrada" });
-    const part = getPart(test, req.params.partId);
-    if (!part) return res.status(404).json({ error: "Parte no encontrada" });
+    // Light lookup only — full getEvent() reloads every CSV passage and was the bottleneck.
+    const ctx = await getPartUploadContext(
+      String(req.params.id),
+      String(req.params.testId),
+      String(req.params.partId)
+    );
+    if (!ctx) return res.status(404).json({ error: "Parte no encontrada" });
     if (!req.file) return res.status(400).json({ error: "Archivo CSV requerido" });
 
     const timingPointId = String(req.body.timingPointId || "");
-    if (!timingPointId && !part.combinedMode) {
+    if (!timingPointId && !ctx.combinedMode) {
       return res.status(400).json({ error: "timingPointId requerido" });
     }
 
     const content = req.file.buffer.toString("utf-8");
     const parsed = parseTimingCsv(content, req.file.originalname);
 
-    const slotId = part.combinedMode
-      ? event.timingPoints[0]?.id || timingPointId || "combined"
+    const slotId = ctx.combinedMode
+      ? ctx.firstTimingPointId || timingPointId || "combined"
       : timingPointId;
 
-    const existing = part.csvs.findIndex((c) => c.timingPointId === slotId);
     const slot = {
       timingPointId: slotId,
       filename: req.file.originalname,
       parsed,
     };
-    if (existing >= 0) part.csvs[existing] = slot;
-    else part.csvs.push(slot);
 
-    // Auto-detect combined mode if lap times present and only one file
+    let combinedMode = ctx.combinedMode;
+    let combinedScoring = ctx.combinedScoring;
     let metaChanged = false;
-    if (part.csvs.length === 1) {
-      const hasLaps = parsed.racePassages.some((p) => p.lapTimeMs != null && p.lapTimeMs > 0);
-      if (hasLaps && req.body.combinedMode === "true" && !part.combinedMode) {
-        part.combinedMode = true;
-        metaChanged = true;
-      }
+    const hasLaps = parsed.racePassages.some((p) => p.lapTimeMs != null && p.lapTimeMs > 0);
+    if (hasLaps && req.body.combinedMode === "true" && !combinedMode) {
+      combinedMode = true;
+      combinedScoring = combinedScoring ?? "time";
+      metaChanged = true;
     }
 
-    // Fast path: only rewrite this slot (+ optional part meta). Skip full event persist.
     await savePartCsvSlot(
-      event.id,
-      part.id,
+      ctx.eventId,
+      ctx.partId,
       slot,
       metaChanged
         ? {
-            combinedMode: part.combinedMode,
-            combinedScoring: part.combinedScoring ?? null,
-            expectedLaps: part.expectedLaps ?? null,
+            combinedMode,
+            combinedScoring: combinedScoring ?? null,
+            expectedLaps: ctx.expectedLaps ?? null,
           }
         : undefined
     );
 
+    // Slim slot for the client: race rows + flags are enough for UI/guards.
+    // Full passages stay in DB (and in server cache via savePartCsvSlot).
     res.json({
-      part,
+      slot: {
+        timingPointId: slot.timingPointId,
+        filename: slot.filename,
+        parsed: {
+          filename: parsed.filename,
+          passages: parsed.racePassages,
+          racePassages: parsed.racePassages,
+          flags: parsed.flags,
+        },
+      },
+      partMeta: {
+        id: ctx.partId,
+        name: ctx.partName,
+        order: ctx.partOrder,
+        combinedMode,
+        combinedScoring,
+        expectedLaps: ctx.expectedLaps,
+      },
       summary: {
         filename: parsed.filename,
         pilots: parsed.racePassages.length,
