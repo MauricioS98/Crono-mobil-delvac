@@ -1,4 +1,4 @@
-/* RedBull standings overlay — top-left, ~75% width, 10px inset */
+/* RedBull standings overlay — fixed 1920×1080 broadcast canvas */
 
 @import url("https://fonts.googleapis.com/css2?family=Oswald:wght@600;700&display=swap");
 
@@ -8,7 +8,7 @@
   width: 100vw;
   height: 100vh;
   margin: 0;
-  padding: 10px;
+  padding: 0;
   overflow: hidden;
   background: transparent;
   display: flex;
@@ -19,9 +19,9 @@
 
 .rb-panel {
   position: relative;
-  width: min(75vw, calc((100vh - 20px) * 16 / 9));
-  aspect-ratio: 16 / 9;
-  height: auto;
+  width: 1920px;
+  height: 1080px;
+  flex: 0 0 auto;
   opacity: 0;
   transform: scale(0.97);
   transform-origin: top left;
@@ -115,29 +115,28 @@
   animation: rb-fade-in 320ms cubic-bezier(0.22, 1, 0.36, 1) 40ms forwards;
 }
 
-/* Test / section name — under "TABLA DE POSICIONES", high contrast */
+/* Test name — plain text under "TABLA DE POSICIONES" */
 .rb-section-label {
   position: absolute;
-  left: 50.2%;
-  top: 31.8%;
-  width: 20%;
-  max-width: 22%;
+  left: 50.8%;
+  top: 32.6%;
+  width: 18%;
   z-index: 5;
   margin: 0;
-  padding: 0.2em 0.45em;
-  color: #fff;
-  background: rgba(8, 18, 48, 0.55);
-  border-left: 3px solid #e10600;
+  padding: 0;
+  color: rgba(255, 255, 255, 0.92);
+  background: none;
+  border: none;
   font-family: Oswald, "Arial Narrow", sans-serif;
-  font-size: clamp(12px, 1.45vw, 24px);
-  font-weight: 700;
-  letter-spacing: 0.05em;
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
-  line-height: 1.15;
+  line-height: 1.2;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.9);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.65);
   opacity: 0;
   pointer-events: none;
 }
@@ -146,13 +145,13 @@
   animation: rb-fade-in 320ms cubic-bezier(0.22, 1, 0.36, 1) 120ms forwards;
 }
 
-/* Tighter row stack */
+/* Rows start lower so test name never overlaps */
 .rb-rows {
   position: absolute;
   left: 31.7%;
-  top: 35.8%;
+  top: 37.6%;
   width: 36.6%;
-  height: 44%;
+  height: 42%;
   display: flex;
   flex-direction: column;
   justify-content: flex-start;
@@ -209,7 +208,7 @@
   text-align: center;
   font-family: Oswald, "Arial Narrow", sans-serif;
   font-weight: 700;
-  font-size: clamp(10px, 1.15vw, 18px);
+  font-size: 18px;
   line-height: 1;
   color: #fff;
   font-variant-numeric: tabular-nums;
@@ -220,10 +219,11 @@
 
 .rb-row-name {
   position: absolute;
-  left: 8.2%;
+  /* Nudge nameplate right so flag clears the bar edge */
+  left: 10.4%;
   top: 6%;
   bottom: 8%;
-  width: 52%;
+  width: 50%;
   display: flex;
   align-items: center;
   overflow: hidden;
@@ -237,13 +237,13 @@
   object-fit: cover;
   object-position: left center;
   pointer-events: none;
-  margin-left: -1%;
+  margin-left: 0;
 }
 
 .rb-row-name-fallback {
   font-family: Oswald, "Arial Narrow", sans-serif;
   font-weight: 700;
-  font-size: clamp(9px, 1.05vw, 16px);
+  font-size: 16px;
   letter-spacing: 0.04em;
   color: #fff;
   text-transform: uppercase;
@@ -280,7 +280,7 @@
 
 .rb-row-time {
   font-weight: 700;
-  font-size: clamp(9px, 1.05vw, 16px);
+  font-size: 16px;
   line-height: 1.05;
   letter-spacing: 0.02em;
   font-variant-numeric: tabular-nums;
@@ -288,7 +288,7 @@
 
 .rb-row-gap {
   font-weight: 600;
-  font-size: clamp(7px, 0.78vw, 12px);
+  font-size: 12px;
   line-height: 1.05;
   opacity: 0.85;
   font-variant-numeric: tabular-nums;
