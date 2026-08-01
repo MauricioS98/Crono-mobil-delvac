@@ -51,7 +51,21 @@ type ViewRow = {
   name: string;
   time: string;
   gap: string;
+  traps: { time: string; label: string }[];
 };
+
+const TRAYECTO_LABELS = ["1er trayecto", "2do trayecto", "3er trayecto"];
+
+function buildTraps(r: ResultRow | FusionRow): { time: string; label: string }[] {
+  if (isFusionRow(r)) return [];
+  const segs = (r.segments || []).filter((s) => s.timeFormatted);
+  if (segs.length < 1) return [];
+  const partials = segs.slice(0, 2).map((s, i) => ({
+    time: s.timeFormatted,
+    label: TRAYECTO_LABELS[i] || `${i + 1}º trayecto`,
+  }));
+  return [...partials, { time: rowTimeFormatted(r), label: "Total" }];
+}
 
 function toViewRows(
   rows: (ResultRow | FusionRow)[],
@@ -60,8 +74,11 @@ function toViewRows(
 ): ViewRow[] {
   return rows.map((r) => {
     const ms = rowTimeMs(r);
+    const traps = buildTraps(r);
     const gap =
-      showGap && r.position > 1 && leaderMs && ms ? formatGap(ms - leaderMs) : "";
+      traps.length === 0 && showGap && r.position > 1 && leaderMs && ms
+        ? formatGap(ms - leaderMs)
+        : "";
     return {
       key: String(r.number || `p${r.position}`),
       position: r.position,
@@ -69,6 +86,7 @@ function toViewRows(
       name: r.name || "—",
       time: rowTimeFormatted(r),
       gap,
+      traps,
     };
   });
 }
@@ -78,7 +96,12 @@ function membershipKey(rows: ViewRow[]): string {
 }
 
 function contentSig(rows: ViewRow[]): string {
-  return rows.map((r) => `${r.key}:${r.position}:${r.time}:${r.gap}:${r.name}`).join(";");
+  return rows
+    .map(
+      (r) =>
+        `${r.key}:${r.position}:${r.time}:${r.gap}:${r.name}:${r.traps.map((t) => t.time).join(",")}`
+    )
+    .join(";");
 }
 
 /** Show prueba name; drop salida / resultado suffixes from board titles. */
@@ -109,6 +132,11 @@ export function RedBullOverlay({
   const testName = useMemo(
     () => displayTestName(section?.title || ""),
     [section?.title]
+  );
+
+  const hasSplits = useMemo(
+    () => allRows.some((r) => r.traps.length > 0),
+    [allRows]
   );
 
   const pageCount = Math.max(1, Math.ceil(allRows.length / PAGE_SIZE) || 1);
@@ -243,7 +271,14 @@ export function RedBullOverlay({
   return (
     <div className="rb-stage">
       <div
-        className={`rb-panel${panelIn ? " rb-panel--in" : ""}${headersIn ? " rb-panel--headers-in" : ""}`}
+        className={[
+          "rb-panel",
+          panelIn ? "rb-panel--in" : "",
+          headersIn ? "rb-panel--headers-in" : "",
+          hasSplits ? "rb-panel--splits" : "",
+        ]
+          .filter(Boolean)
+          .join(" ")}
       >
         <img className="rb-layer rb-fondo" src={RB_ASSETS.fondo} alt="" draggable={false} />
         {showHeader && (
@@ -293,6 +328,7 @@ export function RedBullOverlay({
                 name={r.name}
                 time={r.time}
                 gap={r.gap}
+                traps={r.traps}
                 enterIndex={i}
                 animKey={animKey}
                 exiting={exiting}

@@ -1,12 +1,19 @@
 import { useEffect, useState } from "react";
 import { pilotArtCandidates } from "./pilotArt";
 
+export type TimeTrap = {
+  time: string;
+  label: string;
+};
+
 export type PositionRowProps = {
   position: number;
   number: string;
   name: string;
   time: string;
   gap: string;
+  /** Partial + total traps; empty → classic single time layout */
+  traps?: TimeTrap[];
   /** Stagger index within the current page (0-based) */
   enterIndex: number;
   /** Re-trigger enter animation when page/generation changes */
@@ -33,6 +40,7 @@ export function PositionRow({
   name,
   time,
   gap,
+  traps = [],
   enterIndex,
   animKey,
   exiting = false,
@@ -45,6 +53,7 @@ export function PositionRow({
   const [entered, setEntered] = useState(false);
   const [badgeFailed, setBadgeFailed] = useState(false);
   const badgeSrc = !badgeFailed ? posBadgeSrc(position) : null;
+  const splitMode = traps.length > 0;
 
   useEffect(() => {
     setArtIdx(0);
@@ -66,6 +75,7 @@ export function PositionRow({
     <div
       className={[
         "rb-row",
+        splitMode ? "rb-row--splits" : "",
         entered && !exiting ? "rb-row--in" : "",
         exiting ? "rb-row--out" : "",
         highlighted ? "rb-row--hot" : "",
@@ -79,7 +89,12 @@ export function PositionRow({
       data-pos={position}
       data-number={number}
     >
-      <img className="rb-row-bg" src="/overlays/redbull/row.png" alt="" draggable={false} />
+      <img
+        className="rb-row-bg"
+        src={splitMode ? "/overlays/redbull/row-name.png" : "/overlays/redbull/row.png"}
+        alt=""
+        draggable={false}
+      />
       {badgeSrc ? (
         <img
           className="rb-row-pos-img"
@@ -104,10 +119,23 @@ export function PositionRow({
           <span className="rb-row-name-fallback">{(name || "—").toUpperCase()}</span>
         )}
       </div>
-      <div className="rb-row-timing">
-        <span className="rb-row-time">{time}</span>
-        {gap ? <span className="rb-row-gap">{gap}</span> : null}
-      </div>
+
+      {splitMode ? (
+        <div className="rb-row-traps">
+          {traps.map((t) => (
+            <div key={t.label} className="rb-trap">
+              <img className="rb-trap-bg" src="/overlays/redbull/time-trap.png" alt="" draggable={false} />
+              <span className="rb-trap-time">{t.time}</span>
+              <span className="rb-trap-label">{t.label}</span>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <div className="rb-row-timing">
+          <span className="rb-row-time">{time}</span>
+          {gap ? <span className="rb-row-gap">{gap}</span> : null}
+        </div>
+      )}
     </div>
   );
 }
