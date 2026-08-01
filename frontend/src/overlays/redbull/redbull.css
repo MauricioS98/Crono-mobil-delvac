@@ -54,7 +54,7 @@
 .rb-panel.rb-panel--splits .rb-logo-stack,
 .rb-panel.rb-panel--splits .rb-title {
   inset: auto;
-  left: -220px;
+  left: -70px;
   top: 0;
   width: 2100px;
   height: 1180px;
@@ -62,17 +62,17 @@
 }
 
 .rb-panel.rb-panel--splits .rb-section-label {
-  left: 760px;
+  left: 900px;
   width: 342px;
   top: 400px;
 }
 
 /*
- * Rows must move further left than the art layers — equal shifts keep traps
- * clipped by the board’s right edge. Target: all 3 traps inside the board.
+ * Rows shift left relative to the board so all 3 traps stay inside —
+ * without hugging the left edge.
  */
 .rb-panel.rb-panel--splits .rb-rows {
-  left: 340px;
+  left: 455px;
   top: 448px;
 }
 
@@ -424,7 +424,7 @@
   font-size: 15px;
   line-height: 1.05;
   letter-spacing: 0.02em;
-  padding-top: 6px;
+  padding-top: 8px;
 }
 
 .rb-trap-label {
