@@ -245,7 +245,7 @@
   z-index: 2;
 }
 
-/* Fallback text for position > 16 */
+/* Fallback text for position > 50 — match badge visual weight */
 .rb-row-pos {
   position: absolute;
   left: 0;
@@ -257,16 +257,16 @@
   justify-content: center;
   margin: 0;
   padding: 0;
-  background: none;
+  background: #123881;
   border: none;
-  font-family: "Arial Black", Impact, Oswald, sans-serif;
+  font-family: Impact, "Arial Black", Oswald, sans-serif;
   font-weight: 900;
-  font-size: 26px;
+  font-size: 28px;
   line-height: 1;
   color: #fff;
   font-variant-numeric: tabular-nums;
-  letter-spacing: 0;
-  text-shadow: 0 1px 1px rgba(0, 0, 0, 0.35);
+  letter-spacing: -0.02em;
+  text-shadow: none;
   z-index: 2;
 }
 

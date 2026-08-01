@@ -28,7 +28,7 @@ export type PositionRowProps = {
 const STAGGER_MS = 100;
 
 function posBadgeSrc(position: number): string | null {
-  if (position >= 1 && position <= 16) {
+  if (position >= 1 && position <= 50) {
     return `/overlays/redbull/pos-num/${position}.png`;
   }
   return null;
