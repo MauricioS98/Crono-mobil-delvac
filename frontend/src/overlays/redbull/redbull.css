@@ -51,11 +51,10 @@
   object-fit: fill;
 }
 
-/* Midway between original art (≈0 / 666 / 1068) and the over-shift */
 .rb-panel.rb-panel--splits .rb-logo-stack,
 .rb-panel.rb-panel--splits .rb-title {
   inset: auto;
-  left: -20px;
+  left: 140px;
   top: 0;
   width: 2100px;
   height: 1180px;
@@ -63,13 +62,13 @@
 }
 
 .rb-panel.rb-panel--splits .rb-section-label {
-  left: 1010px;
+  left: 1170px;
   width: 342px;
   top: 400px;
 }
 
 .rb-panel.rb-panel--splits .rb-rows {
-  left: 585px;
+  left: 745px;
   top: 448px;
 }
 
