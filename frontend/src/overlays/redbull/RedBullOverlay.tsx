@@ -30,7 +30,7 @@ function formatGap(ms: number): string {
   return `+${min}:${sec.toFixed(3).padStart(6, "0")}`;
 }
 
-const PAGE_SIZE = 9;
+const PAGE_SIZE = 8;
 const PAGE_HOLD_MS = 2000;
 const ROW_STAGGER_MS = 100;
 const ROW_ENTER_MS = 220;
