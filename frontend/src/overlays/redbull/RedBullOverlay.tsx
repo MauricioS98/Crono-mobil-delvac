@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { FusionRow, ResultRow } from "../../types";
-import { PositionRow } from "./PositionRow";
+import { PositionRow, ROW_STAGGER_MS } from "./PositionRow";
 import { RB_ASSETS } from "./pilotArt";
 import "./redbull.css";
 
@@ -31,8 +31,6 @@ function formatGap(ms: number): string {
 }
 
 const PAGE_SIZE = 8;
-const PAGE_HOLD_MS = 2000;
-const ROW_STAGGER_MS = 100;
 const ROW_ENTER_MS = 220;
 const PAGE_EXIT_MS = 280;
 
@@ -44,6 +42,8 @@ export type RedBullOverlayProps = {
   top: number;
   /** When false, hide trayecto traps and show only total time */
   showSplits: boolean;
+  /** Seconds to hold a full page after all rows have entered (from panel) */
+  pageHoldSeconds: number;
 };
 
 type ViewRow = {
@@ -131,7 +131,10 @@ export function RedBullOverlay({
   showHeader,
   top,
   showSplits,
+  pageHoldSeconds,
 }: RedBullOverlayProps) {
+  const pageHoldMs = Math.min(120, Math.max(3, Math.round(pageHoldSeconds || 10))) * 1000;
+
   const allRows = useMemo(() => {
     if (!section) return [] as ViewRow[];
     const sliced = section.rows.slice(0, top);
@@ -169,6 +172,10 @@ export function RedBullOverlay({
 
   const [displayRows, setDisplayRows] = useState<ViewRow[]>([]);
   const membershipRef = useRef("");
+  const allRowsRef = useRef(allRows);
+  const pageCountRef = useRef(pageCount);
+  allRowsRef.current = allRows;
+  pageCountRef.current = pageCount;
 
   useEffect(() => {
     const t = window.setTimeout(() => setPanelIn(true), 40);
@@ -219,7 +226,8 @@ export function RedBullOverlay({
     setAnimGen((g) => g + 1);
   }, [liveMemberKey, liveContentSig, livePageRows, exiting]);
 
-  // Auto-paginate — do NOT depend on `exiting` or cleanup will cancel the page swap
+  // Auto-paginate. Keep `allRows` out of deps — board poll every few seconds
+  // was resetting the timer before build+hold could finish (esp. with 1s stagger).
   useEffect(() => {
     if (!rowsReady || pageCount <= 1 || displayRows.length === 0) return;
 
@@ -228,22 +236,26 @@ export function RedBullOverlay({
     const hold = window.setTimeout(() => {
       setExiting(true);
       swapTimer = window.setTimeout(() => {
-        const next = (pageRef.current + 1) % pageCount;
+        const count = Math.max(1, pageCountRef.current);
+        const next = (pageRef.current + 1) % count;
         pageRef.current = next;
-        const nextRows = allRows.slice(next * PAGE_SIZE, next * PAGE_SIZE + PAGE_SIZE);
+        const nextRows = allRowsRef.current.slice(
+          next * PAGE_SIZE,
+          next * PAGE_SIZE + PAGE_SIZE
+        );
         membershipRef.current = membershipKey(nextRows);
         setDisplayRows(nextRows);
         setPage(next);
         setAnimGen((g) => g + 1);
         setExiting(false);
       }, PAGE_EXIT_MS);
-    }, buildMs + PAGE_HOLD_MS);
+    }, buildMs + pageHoldMs);
 
     return () => {
       window.clearTimeout(hold);
       if (swapTimer != null) window.clearTimeout(swapTimer);
     };
-  }, [pageCount, safePage, animGen, allRows, displayRows.length, rowsReady]);
+  }, [pageCount, safePage, animGen, displayRows.length, rowsReady, pageHoldMs]);
 
   useEffect(() => {
     if (page >= pageCount) {

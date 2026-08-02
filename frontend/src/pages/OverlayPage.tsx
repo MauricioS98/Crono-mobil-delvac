@@ -87,6 +87,11 @@ export function OverlayPage() {
       ? timingParam === "splits"
       : data?.event.overlayTiming !== "total";
 
+  const pageHoldSeconds = Math.min(
+    120,
+    Math.max(3, Math.round(data?.event.boardPageSeconds ?? 10))
+  );
+
   if (variant === "redbull") {
     return (
       <RedBullOverlay
@@ -95,6 +100,7 @@ export function OverlayPage() {
         showGap={showGap}
         showHeader={showHeader}
         showSplits={showSplits}
+        pageHoldSeconds={pageHoldSeconds}
         top={Math.max(1, Number.isFinite(topParam) && topParam > 0 ? topParam : 40)}
       />
     );

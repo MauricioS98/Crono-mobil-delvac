@@ -331,9 +331,9 @@
   display: flex;
   flex-direction: column;
   align-items: flex-end;
-  justify-content: center;
+  justify-content: flex-start;
   gap: 0;
-  padding-right: 20px;
+  padding: 5px 20px 1px 0;
   box-sizing: border-box;
   z-index: 2;
   font-family: Oswald, "Arial Narrow", sans-serif;
@@ -343,18 +343,19 @@
 
 .rb-row-time {
   font-weight: 700;
-  font-size: 19px;
-  line-height: 1.05;
-  letter-spacing: 0.02em;
+  font-size: 26px;
+  line-height: 1;
+  letter-spacing: 0.01em;
   font-variant-numeric: tabular-nums;
 }
 
 .rb-row-gap {
   font-weight: 600;
-  font-size: 13px;
-  line-height: 1.05;
+  font-size: 11px;
+  line-height: 1;
   opacity: 0.85;
   font-variant-numeric: tabular-nums;
+  margin-top: 1px;
 }
 
 /* ── Split times: name bar + replicated dark-blue traps ── */

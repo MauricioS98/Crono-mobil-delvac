@@ -576,7 +576,7 @@ export function EventDetailPage() {
             <input name="footerText" defaultValue={event.footerText} />
           </div>
           <div className="field">
-            <label>Tablero público — cambio de página (segundos)</label>
+            <label>Cambio de página — tablero y overlay (segundos)</label>
             <input
               name="boardPageSeconds"
               type="number"
@@ -586,8 +586,8 @@ export function EventDetailPage() {
               defaultValue={event.boardPageSeconds ?? 10}
             />
             <p className="muted" style={{ fontSize: "0.8rem", margin: 0 }}>
-              En el tablero se muestran 10 pilotos por página y rotan cada este intervalo. No afecta al
-              overlay.
+              Tablero: 10 pilotos por página. Overlay RedBull: tiempo que permanece la página completa
+              tras aparecer todos los pilotos (cada piloto entra con ~1 s de separación).
             </p>
           </div>
           <fieldset

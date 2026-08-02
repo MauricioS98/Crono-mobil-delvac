@@ -1,6 +1,9 @@
 import { useEffect, useState } from "react";
 import { pilotArtCandidates } from "./pilotArt";
 
+/** Delay between each pilot row appearing (≥ 1s) */
+export const ROW_STAGGER_MS = 1000;
+
 export type TimeTrap = {
   time: string;
   label: string;
@@ -24,8 +27,6 @@ export type PositionRowProps = {
   delta?: "up" | "down" | "same" | null;
   record?: boolean;
 };
-
-const STAGGER_MS = 100;
 
 function posBadgeSrc(position: number): string | null {
   if (position >= 1 && position <= 50) {
@@ -65,7 +66,7 @@ export function PositionRow({
 
   useEffect(() => {
     setEntered(false);
-    const t = window.setTimeout(() => setEntered(true), enterIndex * STAGGER_MS);
+    const t = window.setTimeout(() => setEntered(true), enterIndex * ROW_STAGGER_MS);
     return () => window.clearTimeout(t);
   }, [animKey, enterIndex]);
 
@@ -85,7 +86,7 @@ export function PositionRow({
       ]
         .filter(Boolean)
         .join(" ")}
-      style={{ transitionDelay: exiting ? "0ms" : `${enterIndex * STAGGER_MS}ms` }}
+      style={{ transitionDelay: exiting ? "0ms" : `${enterIndex * ROW_STAGGER_MS}ms` }}
       data-pos={position}
       data-number={number}
     >
