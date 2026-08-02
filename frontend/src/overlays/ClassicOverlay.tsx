@@ -40,6 +40,7 @@ export type ClassicOverlayProps = {
   section: Section | null;
   showHeader: boolean;
   showGap: boolean;
+  showSplits: boolean;
   top: number;
 };
 
@@ -50,6 +51,7 @@ export function ClassicOverlay({
   section,
   showHeader,
   showGap,
+  showSplits,
   top,
 }: ClassicOverlayProps) {
   if (error) {
@@ -87,7 +89,9 @@ export function ClassicOverlay({
             const gapText =
               showGap && r.position > 1 && leaderMs && ms ? formatGap(ms - leaderMs) : "";
             const segments =
-              "segments" in r && Array.isArray(r.segments) ? r.segments : [];
+              showSplits && "segments" in r && Array.isArray(r.segments)
+                ? r.segments
+                : [];
             const hasSegments = segments.length > 0;
             return (
               <div

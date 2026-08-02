@@ -155,6 +155,8 @@ export interface Event {
   boardPageSeconds?: number;
   /** Overlay de transmisión: torre Minerva o paquete gráfico RedBull */
   overlayVariant?: "classic" | "redbull";
+  /** Overlay: 3 times (trayectos + total) or total only */
+  overlayTiming?: "splits" | "total";
   /** 4 colores del evento: [acento, resaltado, fondo paneles, texto]. null = paleta Minerva Timing */
   themeColors?: string[] | null;
   createdAt: string;

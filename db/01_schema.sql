@@ -29,6 +29,8 @@ CREATE TABLE events (
                         CHECK (board_page_seconds BETWEEN 3 AND 120),
   overlay_variant     TEXT NOT NULL DEFAULT 'classic'
                         CHECK (overlay_variant IN ('classic', 'redbull')),
+  overlay_timing      TEXT NOT NULL DEFAULT 'splits'
+                        CHECK (overlay_timing IN ('splits', 'total')),
   created_at          TIMESTAMPTZ NOT NULL DEFAULT now(),
   updated_at          TIMESTAMPTZ NOT NULL DEFAULT now()
 );

@@ -206,6 +206,8 @@ export interface Event {
   boardPageSeconds?: number;
   /** Broadcast overlay style: classic Minerva tower or RedBull graphic pack */
   overlayVariant?: "classic" | "redbull";
+  /** Overlay times: sector traps + total, or total only */
+  overlayTiming?: "splits" | "total";
   createdAt: string;
   updatedAt: string;
 }

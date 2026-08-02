@@ -88,6 +88,7 @@ function emptyEvent(body: Partial<Event> & { password?: string }): Event {
     resultsBoard: [],
     boardPageSeconds: 10,
     overlayVariant: "classic",
+    overlayTiming: "splits",
     createdAt: now,
     updatedAt: now,
   };
@@ -95,6 +96,10 @@ function emptyEvent(body: Partial<Event> & { password?: string }): Event {
 
 function sanitizeOverlayVariant(value: unknown): "classic" | "redbull" {
   return value === "redbull" ? "redbull" : "classic";
+}
+
+function sanitizeOverlayTiming(value: unknown): "splits" | "total" {
+  return value === "total" ? "total" : "splits";
 }
 
 // ─── Events ───────────────────────────────────────────────
@@ -158,6 +163,12 @@ router.put("/events/:id", async (req, res) => {
         : existing.overlayVariant === "redbull"
           ? "redbull"
           : "classic",
+    overlayTiming:
+      req.body.overlayTiming !== undefined
+        ? sanitizeOverlayTiming(req.body.overlayTiming)
+        : existing.overlayTiming === "total"
+          ? "total"
+          : "splits",
     themeColors:
       req.body.themeColors === undefined
         ? existing.themeColors ?? null
@@ -688,6 +699,7 @@ function boardEventMeta(event: Event) {
     themeColors: event.themeColors ?? null,
     boardPageSeconds: event.boardPageSeconds ?? 10,
     overlayVariant: event.overlayVariant === "redbull" ? "redbull" : "classic",
+    overlayTiming: event.overlayTiming === "total" ? "total" : "splits",
   };
 }
 

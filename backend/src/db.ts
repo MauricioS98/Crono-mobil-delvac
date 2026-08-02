@@ -79,4 +79,18 @@ export async function ensureDbSchema(): Promise<void> {
     await pool.query(fs.readFileSync(migPath, "utf8"));
     console.log("Migración overlay_variant aplicada");
   }
+
+  const timingCol = await pool.query<{ attname: string }>(
+    `SELECT a.attname
+     FROM pg_attribute a
+     JOIN pg_class c ON a.attrelid = c.oid
+     JOIN pg_namespace n ON c.relnamespace = n.oid
+     WHERE n.nspname = 'public' AND c.relname = 'events'
+       AND a.attname = 'overlay_timing' AND NOT a.attisdropped`
+  );
+  if (!timingCol.rows[0]) {
+    const migPath = path.resolve(__dirname, "../../db/04_overlay_timing.sql");
+    await pool.query(fs.readFileSync(migPath, "utf8"));
+    console.log("Migración overlay_timing aplicada");
+  }
 }

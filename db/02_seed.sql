@@ -26,8 +26,8 @@ TRUNCATE TABLE
 RESTART IDENTITY CASCADE;
 
 -- ── Evento: Red Bull Moto Urbano (12deca8f-de94-4067-a138-19f2f2c4b15f) ──────────────────────────────
-INSERT INTO events (id, name, event_date, location, header_image, footer_text, password, theme_colors, board_page_seconds, overlay_variant, created_at, updated_at) VALUES (
-  '12deca8f-de94-4067-a138-19f2f2c4b15f', 'Red Bull Moto Urbano', '2026-08-02', 'Calle 85, Bogotá', NULL, 'Minerva Timing', 'RedBull', ARRAY['#b90c12', '#4b29f5', '#1e1d1d', '#ffffff']::TEXT[], 10, 'redbull', '2026-07-28T21:00:21.841Z', '2026-07-28T21:01:13.648Z'
+INSERT INTO events (id, name, event_date, location, header_image, footer_text, password, theme_colors, board_page_seconds, overlay_variant, overlay_timing, created_at, updated_at) VALUES (
+  '12deca8f-de94-4067-a138-19f2f2c4b15f', 'Red Bull Moto Urbano', '2026-08-02', 'Calle 85, Bogotá', NULL, 'Minerva Timing', 'RedBull', ARRAY['#b90c12', '#4b29f5', '#1e1d1d', '#ffffff']::TEXT[], 10, 'redbull', 'splits', '2026-07-28T21:00:21.841Z', '2026-07-28T21:01:13.648Z'
 );
 
 INSERT INTO timing_points (id, event_id, name, offset_ms, sort_order, role) VALUES ('17198bb9-79c7-4edc-9ba5-2257fe4e4be4', '12deca8f-de94-4067-a138-19f2f2c4b15f', 'PC A', 0, 0, 'start_finish');
@@ -35,8 +35,8 @@ INSERT INTO timing_points (id, event_id, name, offset_ms, sort_order, role) VALU
 
 
 -- ── Evento: 38° Gran Premio Mobil Delvac (6a9e489b-d0c2-4127-93d2-afe1ef448990) ──────────────────────────────
-INSERT INTO events (id, name, event_date, location, header_image, footer_text, password, theme_colors, board_page_seconds, overlay_variant, created_at, updated_at) VALUES (
-  '6a9e489b-d0c2-4127-93d2-afe1ef448990', '38° Gran Premio Mobil Delvac', '2026-07-25', 'Autódromo de Tocancipá', NULL, 'Gran Premio Mobil Delvac', 'Pepe', ARRAY['#0055aa', '#0055aa', '#101020', '#ffffff']::TEXT[], 5, 'classic', '2026-07-24T15:01:53.665Z', '2026-07-28T20:59:33.232Z'
+INSERT INTO events (id, name, event_date, location, header_image, footer_text, password, theme_colors, board_page_seconds, overlay_variant, overlay_timing, created_at, updated_at) VALUES (
+  '6a9e489b-d0c2-4127-93d2-afe1ef448990', '38° Gran Premio Mobil Delvac', '2026-07-25', 'Autódromo de Tocancipá', NULL, 'Gran Premio Mobil Delvac', 'Pepe', ARRAY['#0055aa', '#0055aa', '#101020', '#ffffff']::TEXT[], 5, 'classic', 'total', '2026-07-24T15:01:53.665Z', '2026-07-28T20:59:33.232Z'
 );
 
 INSERT INTO timing_points (id, event_id, name, offset_ms, sort_order, role) VALUES ('3638cb86-ac36-4036-831e-c389f7518926', '6a9e489b-d0c2-4127-93d2-afe1ef448990', 'PC A', 0, 0, NULL);

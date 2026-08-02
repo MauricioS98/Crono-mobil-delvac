@@ -247,6 +247,7 @@ export function EventDetailPage() {
         Math.max(3, Math.round(Number(fd.get("boardPageSeconds")) || 10))
       ),
       overlayVariant: fd.get("overlayVariant") === "redbull" ? "redbull" : "classic",
+      overlayTiming: fd.get("overlayTiming") === "total" ? "total" : "splits",
       themeColors: isDefault ? null : themeColors,
     };
 
@@ -589,12 +590,15 @@ export function EventDetailPage() {
               overlay.
             </p>
           </div>
-          <fieldset className="field overlay-variant-field">
+          <fieldset
+            className="field overlay-variant-field"
+            key={`ov-${event.id}-${event.updatedAt}`}
+          >
             <legend>Overlay de transmisión</legend>
             <p className="muted" style={{ fontSize: "0.8rem", margin: "0 0 0.55rem" }}>
               Elige qué gráfico usa la URL <code>/overlay/{event.id}</code> (OBS / vMix).
             </p>
-            <div className="overlay-variant-options" key={`ov-${event.id}-${event.updatedAt}`}>
+            <div className="overlay-variant-options">
               <label className="overlay-variant-option">
                 <input
                   type="radio"
@@ -617,6 +621,35 @@ export function EventDetailPage() {
                 <span>
                   <strong>Overlay RedBull</strong>
                   <small>Pieza gráfica + animación de filas</small>
+                </span>
+              </label>
+            </div>
+            <p className="muted" style={{ fontSize: "0.8rem", margin: "0.85rem 0 0.55rem" }}>
+              ¿Qué tiempos muestra el overlay?
+            </p>
+            <div className="overlay-variant-options">
+              <label className="overlay-variant-option">
+                <input
+                  type="radio"
+                  name="overlayTiming"
+                  value="splits"
+                  defaultChecked={event.overlayTiming !== "total"}
+                />
+                <span>
+                  <strong>3 tiempos</strong>
+                  <small>1er / 2do trayecto + total (si hay parciales)</small>
+                </span>
+              </label>
+              <label className="overlay-variant-option">
+                <input
+                  type="radio"
+                  name="overlayTiming"
+                  value="total"
+                  defaultChecked={event.overlayTiming === "total"}
+                />
+                <span>
+                  <strong>Solo total</strong>
+                  <small>Una sola casilla de tiempo por piloto</small>
                 </span>
               </label>
             </div>

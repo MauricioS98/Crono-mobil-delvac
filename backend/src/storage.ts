@@ -60,6 +60,8 @@ function normalizeLoaded(event: Event): Event {
   }
   event.overlayVariant =
     event.overlayVariant === "redbull" ? "redbull" : "classic";
+  event.overlayTiming =
+    event.overlayTiming === "total" ? "total" : "splits";
   event.tests = (event.tests || []).map((t) => ({
     ...t,
     description: t.description ?? "",

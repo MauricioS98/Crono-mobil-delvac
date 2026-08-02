@@ -43,6 +43,8 @@ function mapEventRow(row: Record<string, unknown>): Omit<
     boardPageSeconds: Number(row.board_page_seconds ?? 10),
     overlayVariant:
       String(row.overlay_variant || "classic") === "redbull" ? "redbull" : "classic",
+    overlayTiming:
+      String(row.overlay_timing || "splits") === "total" ? "total" : "splits",
     createdAt: new Date(String(row.created_at)).toISOString(),
     updatedAt: new Date(String(row.updated_at)).toISOString(),
   };

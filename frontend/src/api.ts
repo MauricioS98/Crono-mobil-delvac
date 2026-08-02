@@ -207,6 +207,7 @@ export const api = {
         footerText: string;
         boardPageSeconds?: number;
         overlayVariant?: "classic" | "redbull";
+        overlayTiming?: "splits" | "total";
       };
       board: ResultsBoardEntry[];
       sections: {

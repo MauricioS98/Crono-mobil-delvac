@@ -20,6 +20,7 @@ export function OverlayPage() {
   const showHeader = params.get("header") !== "0";
   const sectionParam = (params.get("section") || "").trim();
   const variantParam = (params.get("variant") || "").trim().toLowerCase();
+  const timingParam = (params.get("timing") || "").trim().toLowerCase();
 
   useEffect(() => {
     document.documentElement.classList.add("overlay-transparent");
@@ -81,6 +82,11 @@ export function OverlayPage() {
         ? "redbull"
         : "classic";
 
+  const showSplits =
+    timingParam === "splits" || timingParam === "total"
+      ? timingParam === "splits"
+      : data?.event.overlayTiming !== "total";
+
   if (variant === "redbull") {
     return (
       <RedBullOverlay
@@ -88,6 +94,7 @@ export function OverlayPage() {
         section={section}
         showGap={showGap}
         showHeader={showHeader}
+        showSplits={showSplits}
         top={Math.max(1, Number.isFinite(topParam) && topParam > 0 ? topParam : 40)}
       />
     );
@@ -101,6 +108,7 @@ export function OverlayPage() {
       section={section}
       showHeader={showHeader}
       showGap={showGap}
+      showSplits={showSplits}
       top={Math.max(1, Number.isFinite(topParam) && topParam > 0 ? topParam : 20)}
     />
   );

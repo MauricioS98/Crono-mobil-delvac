@@ -42,6 +42,8 @@ export type RedBullOverlayProps = {
   showGap: boolean;
   showHeader: boolean;
   top: number;
+  /** When false, hide trayecto traps and show only total time */
+  showSplits: boolean;
 };
 
 type ViewRow = {
@@ -56,8 +58,11 @@ type ViewRow = {
 
 const TRAYECTO_LABELS = ["1er trayecto", "2do trayecto", "3er trayecto"];
 
-function buildTraps(r: ResultRow | FusionRow): { time: string; label: string }[] {
-  if (isFusionRow(r)) return [];
+function buildTraps(
+  r: ResultRow | FusionRow,
+  showSplits: boolean
+): { time: string; label: string }[] {
+  if (!showSplits || isFusionRow(r)) return [];
   const segs = (r.segments || []).filter((s) => s.timeFormatted);
   if (segs.length < 1) return [];
   const partials = segs.slice(0, 2).map((s, i) => ({
@@ -73,11 +78,12 @@ function buildTraps(r: ResultRow | FusionRow): { time: string; label: string }[]
 function toViewRows(
   rows: (ResultRow | FusionRow)[],
   showGap: boolean,
-  leaderMs: number
+  leaderMs: number,
+  showSplits: boolean
 ): ViewRow[] {
   return rows.map((r) => {
     const ms = rowTimeMs(r);
-    const traps = buildTraps(r);
+    const traps = buildTraps(r, showSplits);
     const gap =
       traps.length === 0 && showGap && r.position > 1 && leaderMs && ms
         ? formatGap(ms - leaderMs)
@@ -124,13 +130,14 @@ export function RedBullOverlay({
   showGap,
   showHeader,
   top,
+  showSplits,
 }: RedBullOverlayProps) {
   const allRows = useMemo(() => {
     if (!section) return [] as ViewRow[];
     const sliced = section.rows.slice(0, top);
     const leaderMs = sliced.length > 0 ? rowTimeMs(sliced[0]) : 0;
-    return toViewRows(sliced, showGap, leaderMs);
-  }, [section, showGap, top]);
+    return toViewRows(sliced, showGap, leaderMs, showSplits);
+  }, [section, showGap, top, showSplits]);
 
   const testName = useMemo(
     () => displayTestName(section?.title || ""),
@@ -138,8 +145,8 @@ export function RedBullOverlay({
   );
 
   const hasSplits = useMemo(
-    () => allRows.some((r) => r.traps.length > 0),
-    [allRows]
+    () => showSplits && allRows.some((r) => r.traps.length > 0),
+    [allRows, showSplits]
   );
 
   const pageCount = Math.max(1, Math.ceil(allRows.length / PAGE_SIZE) || 1);
