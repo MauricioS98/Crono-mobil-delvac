@@ -1,6 +1,7 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import type { Pilot, StartOrderVsPair, TestPart } from "../types";
 import { pilotArtCandidates } from "../overlays/redbull/pilotArt";
+import { api } from "../api";
 
 type Props = {
   eventId: string;
@@ -8,7 +9,10 @@ type Props = {
   testName: string;
   part: TestPart;
   pilots: Pilot[];
+  /** Currently published Orden de salida for the event (only one allowed) */
+  publishedStartOrder?: { testId: string; partId: string } | null;
   onSaved: (pairs: StartOrderVsPair[]) => void;
+  onPublishedChange: (published: { testId: string; partId: string } | null) => void;
   save: (pairs: StartOrderVsPair[]) => Promise<void>;
 };
 
@@ -45,11 +49,7 @@ function MiniPilot({
   return (
     <span className="so-edit-preview">
       {src ? (
-        <img
-          src={src}
-          alt={name || n}
-          onError={() => setIdx((i) => i + 1)}
-        />
+        <img src={src} alt={name || n} onError={() => setIdx((i) => i + 1)} />
       ) : (
         <span className="so-edit-preview-text">
           #{n} {name ? `· ${name}` : "· sin ficha / sin PNG"}
@@ -65,7 +65,9 @@ export function StartOrderVsEditor({
   testName,
   part,
   pilots,
+  publishedStartOrder,
   onSaved,
+  onPublishedChange,
   save,
 }: Props) {
   const [pairs, setPairs] = useState<StartOrderVsPair[]>(
@@ -76,17 +78,12 @@ export function StartOrderVsEditor({
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
 
+  const isPublished =
+    publishedStartOrder?.testId === testId && publishedStartOrder?.partId === part.id;
+
   useEffect(() => {
     setPairs(part.startOrderVs || []);
   }, [part.id, part.startOrderVs]);
-
-  const overlayUrl = useMemo(() => {
-    const q = new URLSearchParams({
-      test: testId,
-      part: part.id,
-    });
-    return `/overlay/${eventId}/orden-salida?${q}`;
-  }, [eventId, testId, part.id]);
 
   const persist = async (next: StartOrderVsPair[]) => {
     setBusy(true);
@@ -130,19 +127,59 @@ export function StartOrderVsEditor({
     await persist(next);
   };
 
+  const togglePublish = async () => {
+    setBusy(true);
+    setErr("");
+    try {
+      if (isPublished) {
+        await api.unpublishOrdenSalida(eventId);
+        onPublishedChange(null);
+      } else {
+        if (pairs.length === 0) {
+          setErr("Agrega al menos un VS antes de publicar");
+          return;
+        }
+        const res = await api.publishOrdenSalida(eventId, testId, part.id);
+        onPublishedChange(res.publishedStartOrder);
+      }
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : "No se pudo publicar");
+    } finally {
+      setBusy(false);
+    }
+  };
+
   return (
     <div className="so-editor">
       <div className="so-editor-head">
         <div>
-          <p className="so-editor-title">Orden de salida (VS)</p>
+          <p className="so-editor-title">
+            Orden de salida (VS)
+            {isPublished && <span className="so-editor-live"> · En overlay</span>}
+          </p>
           <p className="muted" style={{ fontSize: "0.8rem", margin: 0 }}>
-            Enfrentamientos 1 vs 1 para {testName} — {part.name}. Escribe el N° del
-            piloto; se muestra el PNG si existe.
+            Enfrentamientos 1 vs 1 para {testName} — {part.name}. Solo puede haber un orden
+            publicado a la vez; al publicar este se quita el anterior.
           </p>
         </div>
-        <a className="btn btn-secondary btn-sm" href={overlayUrl} target="_blank" rel="noreferrer">
-          Abrir overlay VS
-        </a>
+        <div className="so-editor-head-actions">
+          <button
+            type="button"
+            className={isPublished ? "btn btn-danger btn-sm" : "btn btn-primary btn-sm"}
+            disabled={busy || (!isPublished && pairs.length === 0)}
+            onClick={togglePublish}
+          >
+            {isPublished ? "Despublicar orden" : "Publicar orden de salida"}
+          </button>
+          <a
+            className="btn btn-ghost btn-sm"
+            href={`/overlay/${eventId}/orden-salida`}
+            target="_blank"
+            rel="noreferrer"
+          >
+            Ver overlay
+          </a>
+        </div>
       </div>
 
       {err && <div className="alert alert-error">{err}</div>}

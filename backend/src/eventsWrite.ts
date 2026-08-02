@@ -163,6 +163,21 @@ export async function updatePartStartOrderVs(
   );
 }
 
+/** Set the single published Orden de salida (null clears). */
+export async function updatePublishedStartOrder(
+  eventId: string,
+  published: { testId: string; partId: string } | null
+): Promise<void> {
+  await pool.query(
+    `UPDATE events
+     SET published_start_order_test_id = $2,
+         published_start_order_part_id = $3,
+         updated_at = now()
+     WHERE id = $1`,
+    [eventId, published?.testId ?? null, published?.partId ?? null]
+  );
+}
+
 /** Update combined-mode flags without a full event persist. */
 export async function updatePartCsvMeta(
   partId: string,
@@ -222,8 +237,9 @@ export async function persistEvent(event: Event): Promise<Event> {
       `INSERT INTO events (
         id, name, event_date, location, header_image, footer_text, password,
         theme_colors, board_page_seconds, overlay_variant, overlay_timing,
+        published_start_order_test_id, published_start_order_part_id,
         created_at, updated_at
-      ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12::timestamptz,$13::timestamptz)
+      ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14::timestamptz,$15::timestamptz)
       ON CONFLICT (id) DO UPDATE SET
         name = EXCLUDED.name,
         event_date = EXCLUDED.event_date,
@@ -235,6 +251,8 @@ export async function persistEvent(event: Event): Promise<Event> {
         board_page_seconds = EXCLUDED.board_page_seconds,
         overlay_variant = EXCLUDED.overlay_variant,
         overlay_timing = EXCLUDED.overlay_timing,
+        published_start_order_test_id = EXCLUDED.published_start_order_test_id,
+        published_start_order_part_id = EXCLUDED.published_start_order_part_id,
         updated_at = EXCLUDED.updated_at`,
       [
         event.id,
@@ -248,6 +266,8 @@ export async function persistEvent(event: Event): Promise<Event> {
         Math.min(120, Math.max(3, Math.round(event.boardPageSeconds ?? 10))),
         event.overlayVariant === "redbull" ? "redbull" : "classic",
         event.overlayTiming === "total" ? "total" : "splits",
+        event.publishedStartOrder?.testId ?? null,
+        event.publishedStartOrder?.partId ?? null,
         event.createdAt,
         event.updatedAt,
       ]

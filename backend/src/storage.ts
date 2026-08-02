@@ -9,6 +9,7 @@ import {
   replacePartCsvs,
   updatePartCsvMeta,
   updatePartStartOrderVs,
+  updatePublishedStartOrder,
   upsertPartCsvSlot,
 } from "./eventsWrite.js";
 
@@ -63,6 +64,13 @@ function normalizeLoaded(event: Event): Event {
     event.overlayVariant === "redbull" ? "redbull" : "classic";
   event.overlayTiming =
     event.overlayTiming === "total" ? "total" : "splits";
+  event.publishedStartOrder =
+    event.publishedStartOrder?.testId && event.publishedStartOrder?.partId
+      ? {
+          testId: event.publishedStartOrder.testId,
+          partId: event.publishedStartOrder.partId,
+        }
+      : null;
   event.tests = (event.tests || []).map((t) => ({
     ...t,
     description: t.description ?? "",
@@ -205,6 +213,22 @@ export async function savePartStartOrderVs(
         break;
       }
     }
+  } else {
+    invalidateEventCache(eventId);
+  }
+}
+
+/** Publish / clear the single active Orden de salida for the overlay. */
+export async function savePublishedStartOrder(
+  eventId: string,
+  published: { testId: string; partId: string } | null
+): Promise<void> {
+  await updatePublishedStartOrder(eventId, published);
+  const hit = eventCache.get(eventId);
+  if (hit) {
+    hit.event.publishedStartOrder = published;
+    hit.event.updatedAt = new Date().toISOString();
+    hit.at = Date.now();
   } else {
     invalidateEventCache(eventId);
   }

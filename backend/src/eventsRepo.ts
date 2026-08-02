@@ -59,6 +59,13 @@ function mapEventRow(row: Record<string, unknown>): Omit<
       String(row.overlay_variant || "classic") === "redbull" ? "redbull" : "classic",
     overlayTiming:
       String(row.overlay_timing || "splits") === "total" ? "total" : "splits",
+    publishedStartOrder:
+      row.published_start_order_test_id && row.published_start_order_part_id
+        ? {
+            testId: String(row.published_start_order_test_id),
+            partId: String(row.published_start_order_part_id),
+          }
+        : null,
     createdAt: new Date(String(row.created_at)).toISOString(),
     updatedAt: new Date(String(row.updated_at)).toISOString(),
   };

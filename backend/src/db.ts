@@ -107,4 +107,18 @@ export async function ensureDbSchema(): Promise<void> {
     await pool.query(fs.readFileSync(migPath, "utf8"));
     console.log("Migración start_order_vs aplicada");
   }
+
+  const pubSoCol = await pool.query<{ attname: string }>(
+    `SELECT a.attname
+     FROM pg_attribute a
+     JOIN pg_class c ON a.attrelid = c.oid
+     JOIN pg_namespace n ON c.relnamespace = n.oid
+     WHERE n.nspname = 'public' AND c.relname = 'events'
+       AND a.attname = 'published_start_order_part_id' AND NOT a.attisdropped`
+  );
+  if (!pubSoCol.rows[0]) {
+    const migPath = path.resolve(__dirname, "../../db/06_published_start_order.sql");
+    await pool.query(fs.readFileSync(migPath, "utf8"));
+    console.log("Migración published_start_order aplicada");
+  }
 }

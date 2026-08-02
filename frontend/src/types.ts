@@ -165,6 +165,8 @@ export interface Event {
   overlayVariant?: "classic" | "redbull";
   /** Overlay: 3 times (trayectos + total) or total only */
   overlayTiming?: "splits" | "total";
+  /** Single published Orden de salida for the VS overlay */
+  publishedStartOrder?: { testId: string; partId: string } | null;
   /** 4 colores del evento: [acento, resaltado, fondo paneles, texto]. null = paleta Minerva Timing */
   themeColors?: string[] | null;
   createdAt: string;

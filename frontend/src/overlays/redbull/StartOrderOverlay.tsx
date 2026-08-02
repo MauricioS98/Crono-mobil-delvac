@@ -121,20 +121,18 @@ export function StartOrderOverlayPage() {
   const selection = useMemo(() => {
     if (!data) return null;
     const tests = data.tests || [];
+    const published = data.event.publishedStartOrder;
+
+    // Preview override via URL (optional); otherwise only the published order.
     let test = testParam ? tests.find((t) => t.id === testParam) : null;
-    if (!test) {
-      test =
-        tests.find((t) => (t.parts || []).some((p) => (p.startOrderVs || []).length > 0)) ||
-        tests[0] ||
-        null;
+    let part = test && partParam ? test.parts.find((p) => p.id === partParam) : null;
+
+    if (!test || !part) {
+      if (!published) return null;
+      test = tests.find((t) => t.id === published.testId) || null;
+      part = test?.parts.find((p) => p.id === published.partId) || null;
     }
-    if (!test) return null;
-    let part = partParam ? test.parts.find((p) => p.id === partParam) : null;
-    if (!part) {
-      part =
-        test.parts.find((p) => (p.startOrderVs || []).length > 0) || test.parts[0] || null;
-    }
-    if (!part) return null;
+    if (!test || !part) return null;
     return { test, part, pairs: (part.startOrderVs || []) as Pair[] };
   }, [data, testParam, partParam]);
 
@@ -146,8 +144,21 @@ export function StartOrderOverlayPage() {
     );
   }
 
-  if (!data || !selection) {
+  if (!data) {
     return <div className="rb-stage" />;
+  }
+
+  if (!selection) {
+    return (
+      <div className="rb-stage">
+        <div className="rb-panel rb-panel--in so-panel">
+          <img className="rb-layer rb-fondo" src={RB_ASSETS.fondo} alt="" draggable={false} />
+          <p className="so-empty so-empty--center">
+            No hay un orden de salida publicado
+          </p>
+        </div>
+      </div>
+    );
   }
 
   const { test, part, pairs } = selection;

@@ -1130,6 +1130,7 @@ export function EventDetailPage() {
                                   testName={test.name}
                                   part={selectedPart}
                                   pilots={event.pilots || []}
+                                  publishedStartOrder={event.publishedStartOrder ?? null}
                                   save={async (pairs) => {
                                     await api.updatePart(event.id, test.id, selectedPart.id, {
                                       startOrderVs: pairs,
@@ -1154,6 +1155,16 @@ export function EventDetailPage() {
                                         ),
                                       };
                                     });
+                                  }}
+                                  onPublishedChange={(published) => {
+                                    setEvent((prev) =>
+                                      prev ? { ...prev, publishedStartOrder: published } : prev
+                                    );
+                                    setMsg(
+                                      published
+                                        ? "Orden de salida publicado en el overlay"
+                                        : "Orden de salida despublicado"
+                                    );
                                   }}
                                 />
 

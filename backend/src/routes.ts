@@ -13,6 +13,7 @@ import {
   saveEvent,
   savePartCsvSlot,
   savePartStartOrderVs,
+  savePublishedStartOrder,
   verifyEventPassword,
   DEFAULT_EVENT_PASSWORD,
 } from "./storage.js";
@@ -104,6 +105,7 @@ function emptyEvent(body: Partial<Event> & { password?: string }): Event {
     boardPageSeconds: 10,
     overlayVariant: "classic",
     overlayTiming: "splits",
+    publishedStartOrder: null,
     createdAt: now,
     updatedAt: now,
   };
@@ -406,6 +408,7 @@ router.get("/events/:id/orden-salida", async (req, res) => {
       name: event.name,
       overlayVariant: event.overlayVariant === "redbull" ? "redbull" : "classic",
       boardPageSeconds: event.boardPageSeconds ?? 10,
+      publishedStartOrder: event.publishedStartOrder ?? null,
     },
     pilots: (event.pilots || []).map((p) => ({
       number: p.number,
@@ -428,6 +431,31 @@ router.get("/events/:id/orden-salida", async (req, res) => {
           })),
       })),
   });
+});
+
+/** Publish one Orden de salida (replaces any previously published). */
+router.post("/events/:id/orden-salida/publish", async (req, res) => {
+  const event = await getEvent(String(req.params.id));
+  if (!event) return res.status(404).json({ error: "Evento no encontrado" });
+  const testId = String(req.body?.testId || "");
+  const partId = String(req.body?.partId || "");
+  const test = getTest(event, testId);
+  if (!test) return res.status(404).json({ error: "Prueba no encontrada" });
+  const part = getPart(test, partId);
+  if (!part) return res.status(404).json({ error: "Parte no encontrada" });
+  if (!(part.startOrderVs || []).length) {
+    return res.status(400).json({ error: "Esta salida no tiene enfrentamientos VS" });
+  }
+  await savePublishedStartOrder(event.id, { testId, partId });
+  res.json({ publishedStartOrder: { testId, partId } });
+});
+
+/** Clear the published Orden de salida. */
+router.delete("/events/:id/orden-salida/publish", async (req, res) => {
+  const event = await getEvent(String(req.params.id));
+  if (!event) return res.status(404).json({ error: "Evento no encontrado" });
+  await savePublishedStartOrder(event.id, null);
+  res.json({ publishedStartOrder: null });
 });
 
 router.delete("/events/:id/tests/:testId/parts/:partId", async (req, res) => {

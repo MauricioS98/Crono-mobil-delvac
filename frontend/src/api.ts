@@ -116,6 +116,7 @@ export const api = {
         name: string;
         overlayVariant?: "classic" | "redbull";
         boardPageSeconds?: number;
+        publishedStartOrder?: { testId: string; partId: string } | null;
       };
       pilots: { number: string; name: string }[];
       tests: {
@@ -129,6 +130,21 @@ export const api = {
         }[];
       }[];
     }>(`/events/${eventId}/orden-salida`),
+
+  publishOrdenSalida: (eventId: string, testId: string, partId: string) =>
+    request<{ publishedStartOrder: { testId: string; partId: string } }>(
+      `/events/${eventId}/orden-salida/publish`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ testId, partId }),
+      }
+    ),
+
+  unpublishOrdenSalida: (eventId: string) =>
+    request<{ publishedStartOrder: null }>(`/events/${eventId}/orden-salida/publish`, {
+      method: "DELETE",
+    }),
   deletePart: (eventId: string, testId: string, partId: string) =>
     request(`/events/${eventId}/tests/${testId}/parts/${partId}`, { method: "DELETE" }),
 

@@ -216,6 +216,8 @@ export interface Event {
   overlayVariant?: "classic" | "redbull";
   /** Overlay times: sector traps + total, or total only */
   overlayTiming?: "splits" | "total";
+  /** Single published Orden de salida for the VS overlay (null = none) */
+  publishedStartOrder?: { testId: string; partId: string } | null;
   createdAt: string;
   updatedAt: string;
 }

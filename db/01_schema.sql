@@ -31,6 +31,9 @@ CREATE TABLE events (
                         CHECK (overlay_variant IN ('classic', 'redbull')),
   overlay_timing      TEXT NOT NULL DEFAULT 'splits'
                         CHECK (overlay_timing IN ('splits', 'total')),
+  -- Single active Orden de salida for /overlay/:id/orden-salida
+  published_start_order_test_id UUID NULL,
+  published_start_order_part_id UUID NULL,
   created_at          TIMESTAMPTZ NOT NULL DEFAULT now(),
   updated_at          TIMESTAMPTZ NOT NULL DEFAULT now()
 );
