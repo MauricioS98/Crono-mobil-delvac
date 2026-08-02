@@ -97,7 +97,6 @@ export function OverlayPage() {
       <RedBullOverlay
         error={error}
         section={section}
-        showGap={showGap}
         showHeader={showHeader}
         showSplits={showSplits}
         pageHoldSeconds={pageHoldSeconds}

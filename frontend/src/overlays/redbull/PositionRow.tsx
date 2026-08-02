@@ -14,7 +14,6 @@ export type PositionRowProps = {
   number: string;
   name: string;
   time: string;
-  gap: string;
   /** Partial + total traps; empty → classic single time layout */
   traps?: TimeTrap[];
   /** Stagger index within the current page (0-based) */
@@ -40,7 +39,6 @@ export function PositionRow({
   number,
   name,
   time,
-  gap,
   traps = [],
   enterIndex,
   animKey,
@@ -134,7 +132,6 @@ export function PositionRow({
       ) : (
         <div className="rb-row-timing">
           <span className="rb-row-time">{time}</span>
-          {gap ? <span className="rb-row-gap">{gap}</span> : null}
         </div>
       )}
     </div>

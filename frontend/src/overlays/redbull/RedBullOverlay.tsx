@@ -13,21 +13,8 @@ function isFusionRow(r: ResultRow | FusionRow): r is FusionRow {
   return "totalTimeFormatted" in r;
 }
 
-function rowTimeMs(r: ResultRow | FusionRow): number {
-  return isFusionRow(r) ? r.totalTimeMs : r.timeMs;
-}
-
 function rowTimeFormatted(r: ResultRow | FusionRow): string {
   return isFusionRow(r) ? r.totalTimeFormatted : r.timeFormatted;
-}
-
-function formatGap(ms: number): string {
-  if (ms <= 0) return "";
-  const totalSec = ms / 1000;
-  if (totalSec < 60) return `+${totalSec.toFixed(3)}`;
-  const min = Math.floor(totalSec / 60);
-  const sec = totalSec - min * 60;
-  return `+${min}:${sec.toFixed(3).padStart(6, "0")}`;
 }
 
 const PAGE_SIZE = 8;
@@ -37,7 +24,6 @@ const PAGE_EXIT_MS = 280;
 export type RedBullOverlayProps = {
   error: string;
   section: Section | null;
-  showGap: boolean;
   showHeader: boolean;
   top: number;
   /** When false, hide trayecto traps and show only total time */
@@ -52,7 +38,6 @@ type ViewRow = {
   number: string;
   name: string;
   time: string;
-  gap: string;
   traps: { time: string; label: string }[];
 };
 
@@ -77,24 +62,16 @@ function buildTraps(
 
 function toViewRows(
   rows: (ResultRow | FusionRow)[],
-  showGap: boolean,
-  leaderMs: number,
   showSplits: boolean
 ): ViewRow[] {
   return rows.map((r) => {
-    const ms = rowTimeMs(r);
     const traps = buildTraps(r, showSplits);
-    const gap =
-      traps.length === 0 && showGap && r.position > 1 && leaderMs && ms
-        ? formatGap(ms - leaderMs)
-        : "";
     return {
       key: String(r.number || `p${r.position}`),
       position: r.position,
       number: String(r.number || ""),
       name: r.name || "—",
       time: rowTimeFormatted(r),
-      gap,
       traps,
     };
   });
@@ -108,7 +85,7 @@ function contentSig(rows: ViewRow[]): string {
   return rows
     .map(
       (r) =>
-        `${r.key}:${r.position}:${r.time}:${r.gap}:${r.name}:${r.traps.map((t) => t.time).join(",")}`
+        `${r.key}:${r.position}:${r.time}:${r.name}:${r.traps.map((t) => t.time).join(",")}`
     )
     .join(";");
 }
@@ -127,7 +104,6 @@ type LogoPhase = "idle" | "phase1" | "phase2" | "phase3" | "done";
 export function RedBullOverlay({
   error,
   section,
-  showGap,
   showHeader,
   top,
   showSplits,
@@ -138,9 +114,8 @@ export function RedBullOverlay({
   const allRows = useMemo(() => {
     if (!section) return [] as ViewRow[];
     const sliced = section.rows.slice(0, top);
-    const leaderMs = sliced.length > 0 ? rowTimeMs(sliced[0]) : 0;
-    return toViewRows(sliced, showGap, leaderMs, showSplits);
-  }, [section, showGap, top, showSplits]);
+    return toViewRows(sliced, showSplits);
+  }, [section, top, showSplits]);
 
   const testName = useMemo(
     () => displayTestName(section?.title || ""),
@@ -349,7 +324,6 @@ export function RedBullOverlay({
                 number={r.number}
                 name={r.name}
                 time={r.time}
-                gap={r.gap}
                 traps={r.traps}
                 enterIndex={i}
                 animKey={animKey}
