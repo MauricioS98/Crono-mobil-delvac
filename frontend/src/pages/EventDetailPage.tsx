@@ -5,10 +5,19 @@ import { ConfirmDialog, type ConfirmDialogState } from "../components/ConfirmDia
 import { canDeletePart, canDeleteTest } from "../lib/deleteGuards";
 import { isEventUnlocked, markEventUnlocked } from "../lib/eventAuth";
 import { matchesPilotSearch } from "../lib/search";
-import type { Event, PartCsvSlot, ResultRow, Test, TestPart, TimingPoint } from "../types";
+import type {
+  Event,
+  PartCsvSlot,
+  ResultRow,
+  StartOrderVsPair,
+  Test,
+  TestPart,
+  TimingPoint,
+} from "../types";
 import { MINERVA_COLORS, THEME_COLOR_LABELS, resolveThemeColors } from "../theme";
 import { EventPilotsSection } from "./EventPilotsSection";
 import { EventFusionPanel } from "./EventFusionPanel";
+import { StartOrderVsEditor } from "../components/StartOrderVsEditor";
 
 function msFromOffset(raw: string): number {
   let s = raw.trim().replace(",", ".");
@@ -534,6 +543,14 @@ export function EventDetailPage() {
             rel="noreferrer"
           >
             Overlay
+          </a>
+          <a
+            className="btn btn-ghost"
+            href={`/overlay/${event.id}/orden-salida`}
+            target="_blank"
+            rel="noreferrer"
+          >
+            Orden de salida
           </a>
         </div>
       </div>
@@ -1106,6 +1123,39 @@ export function EventDetailPage() {
                                     )}
                                   </div>
                                 )}
+
+                                <StartOrderVsEditor
+                                  eventId={event.id}
+                                  testId={test.id}
+                                  testName={test.name}
+                                  part={selectedPart}
+                                  pilots={event.pilots || []}
+                                  save={async (pairs) => {
+                                    await api.updatePart(event.id, test.id, selectedPart.id, {
+                                      startOrderVs: pairs,
+                                    });
+                                  }}
+                                  onSaved={(pairs: StartOrderVsPair[]) => {
+                                    setEvent((prev) => {
+                                      if (!prev) return prev;
+                                      return {
+                                        ...prev,
+                                        tests: prev.tests.map((t) =>
+                                          t.id !== test.id
+                                            ? t
+                                            : {
+                                                ...t,
+                                                parts: t.parts.map((p) =>
+                                                  p.id === selectedPart.id
+                                                    ? { ...p, startOrderVs: pairs }
+                                                    : p
+                                                ),
+                                              }
+                                        ),
+                                      };
+                                    });
+                                  }}
+                                />
 
                                 {selectedPart.combinedMode ? (
                                   <CsvDrop

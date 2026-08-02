@@ -10,12 +10,26 @@ import type {
   PilotPenalty,
   ResultsBoardEntry,
   SavedFusion,
+  StartOrderVsPair,
   Test,
   TestPart,
   TestTimingMode,
   TimingPoint,
   TimingPointRole,
 } from "./types.js";
+
+function parseStartOrderVs(raw: unknown): StartOrderVsPair[] {
+  if (!Array.isArray(raw)) return [];
+  const out: StartOrderVsPair[] = [];
+  for (const item of raw) {
+    if (!item || typeof item !== "object") continue;
+    const a = String((item as { a?: unknown }).a ?? "").trim();
+    const b = String((item as { b?: unknown }).b ?? "").trim();
+    if (!a && !b) continue;
+    out.push({ a, b });
+  }
+  return out;
+}
 
 type Q = pg.PoolClient | typeof pool;
 
@@ -220,6 +234,7 @@ export async function loadEvent(id: string): Promise<Event | null> {
             ? (String(r.combined_scoring) as "time" | "laps")
             : undefined,
           expectedLaps: r.expected_laps == null ? null : Number(r.expected_laps),
+          startOrderVs: parseStartOrderVs(r.start_order_vs),
           csvs: slots.map((s) => {
             const passages = passagesByUpload.get(s.uploadId) || [];
             const racePassages = raceByUpload.get(s.uploadId) || [];
@@ -257,6 +272,7 @@ export async function loadEvent(id: string): Promise<Event | null> {
             ? (String(r.combined_scoring) as "time" | "laps")
             : undefined,
           expectedLaps: r.expected_laps == null ? null : Number(r.expected_laps),
+          startOrderVs: parseStartOrderVs(r.start_order_vs),
           csvs: [],
         });
       }

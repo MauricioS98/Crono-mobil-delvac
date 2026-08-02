@@ -12,6 +12,7 @@ import {
   publicEvent,
   saveEvent,
   savePartCsvSlot,
+  savePartStartOrderVs,
   verifyEventPassword,
   DEFAULT_EVENT_PASSWORD,
 } from "./storage.js";
@@ -22,11 +23,25 @@ import type {
   Pilot,
   ResultRow,
   ResultsBoardEntry,
+  StartOrderVsPair,
   Test,
   TestPart,
   TestTimingMode,
   TimingPoint,
 } from "./types.js";
+
+function sanitizeStartOrderVs(raw: unknown): StartOrderVsPair[] {
+  if (!Array.isArray(raw)) return [];
+  const out: StartOrderVsPair[] = [];
+  for (const item of raw) {
+    if (!item || typeof item !== "object") continue;
+    const a = String((item as { a?: unknown }).a ?? "").trim();
+    const b = String((item as { b?: unknown }).b ?? "").trim();
+    if (!a && !b) continue;
+    out.push({ a, b });
+  }
+  return out;
+}
 import { parseOffsetToMs, formatOffset } from "./timeUtils.js";
 import { parseTimingCsv } from "./csvParser.js";
 import {
@@ -330,6 +345,7 @@ router.post("/events/:id/tests/:testId/parts", async (req, res) => {
           ? null
           : Number(req.body.expectedLaps)
         : null,
+    startOrderVs: [],
     csvs: [],
   };
   test.parts.push(part);
@@ -362,8 +378,56 @@ router.put("/events/:id/tests/:testId/parts/:partId", async (req, res) => {
     part.expectedLaps =
       raw === null || raw === "" || raw === "indeterminate" ? null : Number(raw);
   }
+
+  // VS start-order: light persist (no full event rewrite / CSV reload)
+  if (req.body.startOrderVs !== undefined) {
+    part.startOrderVs = sanitizeStartOrderVs(req.body.startOrderVs);
+    await savePartStartOrderVs(event.id, part.id, part.startOrderVs);
+    // If only startOrderVs changed, skip heavy saveEvent
+    const onlyVs =
+      req.body.name == null &&
+      req.body.combinedMode == null &&
+      req.body.combinedScoring == null &&
+      req.body.expectedLaps === undefined;
+    if (onlyVs) return res.json(part);
+  }
+
   await saveEvent(event);
   res.json(part);
+});
+
+/** Light payload for Orden de salida overlay (no CSV passages). */
+router.get("/events/:id/orden-salida", async (req, res) => {
+  const event = await getEvent(String(req.params.id));
+  if (!event) return res.status(404).json({ error: "Evento no encontrado" });
+  res.json({
+    event: {
+      id: event.id,
+      name: event.name,
+      overlayVariant: event.overlayVariant === "redbull" ? "redbull" : "classic",
+      boardPageSeconds: event.boardPageSeconds ?? 10,
+    },
+    pilots: (event.pilots || []).map((p) => ({
+      number: p.number,
+      name: p.name || "",
+    })),
+    tests: (event.tests || [])
+      .slice()
+      .sort((a, b) => a.order - b.order)
+      .map((t) => ({
+        id: t.id,
+        name: t.name,
+        parts: (t.parts || [])
+          .slice()
+          .sort((a, b) => a.order - b.order)
+          .map((p) => ({
+            id: p.id,
+            name: p.name,
+            order: p.order,
+            startOrderVs: p.startOrderVs || [],
+          })),
+      })),
+  });
 });
 
 router.delete("/events/:id/tests/:testId/parts/:partId", async (req, res) => {

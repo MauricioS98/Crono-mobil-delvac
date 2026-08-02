@@ -100,6 +100,7 @@ export const api = {
       combinedMode?: boolean;
       combinedScoring?: "time" | "laps";
       expectedLaps?: number | null;
+      startOrderVs?: { a: string; b: string }[];
     }
   ) =>
     request(`/events/${eventId}/tests/${testId}/parts/${partId}`, {
@@ -107,6 +108,27 @@ export const api = {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(data),
     }),
+
+  getOrdenSalida: (eventId: string) =>
+    request<{
+      event: {
+        id: string;
+        name: string;
+        overlayVariant?: "classic" | "redbull";
+        boardPageSeconds?: number;
+      };
+      pilots: { number: string; name: string }[];
+      tests: {
+        id: string;
+        name: string;
+        parts: {
+          id: string;
+          name: string;
+          order: number;
+          startOrderVs: { a: string; b: string }[];
+        }[];
+      }[];
+    }>(`/events/${eventId}/orden-salida`),
   deletePart: (eventId: string, testId: string, partId: string) =>
     request(`/events/${eventId}/tests/${testId}/parts/${partId}`, { method: "DELETE" }),
 

@@ -1,7 +1,7 @@
 import { randomUUID } from "crypto";
 import type pg from "pg";
 import { pool, withTransaction } from "./db.js";
-import type { Event, PartCsvSlot, Passage } from "./types.js";
+import type { Event, PartCsvSlot, Passage, StartOrderVsPair } from "./types.js";
 
 type Q = pg.PoolClient;
 
@@ -150,6 +150,17 @@ export async function upsertPartCsvSlot(partId: string, slot: PartCsvSlot): Prom
     );
     await writeCsvSlot(client, partId, slot);
   });
+}
+
+/** Persist VS start-order pairs without a full event rewrite. */
+export async function updatePartStartOrderVs(
+  partId: string,
+  pairs: StartOrderVsPair[]
+): Promise<void> {
+  await pool.query(
+    `UPDATE test_parts SET start_order_vs = $1::jsonb WHERE id = $2`,
+    [JSON.stringify(pairs || []), partId]
+  );
 }
 
 /** Update combined-mode flags without a full event persist. */
@@ -364,14 +375,16 @@ export async function persistEvent(event: Event): Promise<Event> {
         await q(
           client,
           `INSERT INTO test_parts (
-            id, test_id, event_id, name, sort_order, combined_mode, combined_scoring, expected_laps
-          ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8)
+            id, test_id, event_id, name, sort_order, combined_mode, combined_scoring,
+            expected_laps, start_order_vs
+          ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9::jsonb)
           ON CONFLICT (id) DO UPDATE SET
             name = EXCLUDED.name,
             sort_order = EXCLUDED.sort_order,
             combined_mode = EXCLUDED.combined_mode,
             combined_scoring = EXCLUDED.combined_scoring,
-            expected_laps = EXCLUDED.expected_laps`,
+            expected_laps = EXCLUDED.expected_laps,
+            start_order_vs = EXCLUDED.start_order_vs`,
           [
             part.id,
             t.id,
@@ -381,6 +394,7 @@ export async function persistEvent(event: Event): Promise<Event> {
             Boolean(part.combinedMode),
             scoring,
             part.expectedLaps ?? null,
+            JSON.stringify(part.startOrderVs || []),
           ]
         );
       }

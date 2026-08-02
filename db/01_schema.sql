@@ -143,6 +143,8 @@ CREATE TABLE test_parts (
   combined_scoring   TEXT NULL
                        CHECK (combined_scoring IS NULL OR combined_scoring IN ('time', 'laps')),
   expected_laps      INTEGER NULL CHECK (expected_laps IS NULL OR expected_laps > 0),
+  -- VS pairs for "Orden de salida" overlay: [{ "a": "1", "b": "2" }, ...]
+  start_order_vs     JSONB NOT NULL DEFAULT '[]'::jsonb,
   UNIQUE (test_id, id),
   UNIQUE (test_id, sort_order)
 );

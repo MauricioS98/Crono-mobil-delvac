@@ -1,13 +1,14 @@
 import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
-import type { Event, PartCsvSlot, Pilot } from "./types.js";
+import type { Event, PartCsvSlot, Pilot, StartOrderVsPair } from "./types.js";
 import { getPartUploadContext, loadAllEvents, loadEvent } from "./eventsRepo.js";
 import {
   persistEvent,
   removeEvent,
   replacePartCsvs,
   updatePartCsvMeta,
+  updatePartStartOrderVs,
   upsertPartCsvSlot,
 } from "./eventsWrite.js";
 
@@ -71,6 +72,7 @@ function normalizeLoaded(event: Event): Event {
       ...p,
       combinedScoring: p.combinedScoring ?? (p.combinedMode ? "time" : undefined),
       expectedLaps: p.expectedLaps ?? null,
+      startOrderVs: Array.isArray(p.startOrderVs) ? p.startOrderVs : [],
     })),
     fromPointId: t.fromPointId ?? null,
     toPointId: t.toPointId ?? null,
@@ -182,6 +184,29 @@ export async function savePartCsvSlot(
   // Prefer in-place cache patch — invalidating forces a multi-MB reload of all CSVs.
   if (eventCache.has(eventId)) {
     patchEventCacheCsvSlot(eventId, partId, slot, partMeta);
+  }
+}
+
+/** Persist VS start-order for a salida (fast path). */
+export async function savePartStartOrderVs(
+  eventId: string,
+  partId: string,
+  pairs: StartOrderVsPair[]
+): Promise<void> {
+  await updatePartStartOrderVs(partId, pairs);
+  const hit = eventCache.get(eventId);
+  if (hit) {
+    for (const test of hit.event.tests || []) {
+      const part = (test.parts || []).find((p) => p.id === partId);
+      if (part) {
+        part.startOrderVs = pairs;
+        hit.event.updatedAt = new Date().toISOString();
+        hit.at = Date.now();
+        break;
+      }
+    }
+  } else {
+    invalidateEventCache(eventId);
   }
 }
 

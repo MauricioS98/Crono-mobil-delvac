@@ -93,4 +93,18 @@ export async function ensureDbSchema(): Promise<void> {
     await pool.query(fs.readFileSync(migPath, "utf8"));
     console.log("Migración overlay_timing aplicada");
   }
+
+  const vsCol = await pool.query<{ attname: string }>(
+    `SELECT a.attname
+     FROM pg_attribute a
+     JOIN pg_class c ON a.attrelid = c.oid
+     JOIN pg_namespace n ON c.relnamespace = n.oid
+     WHERE n.nspname = 'public' AND c.relname = 'test_parts'
+       AND a.attname = 'start_order_vs' AND NOT a.attisdropped`
+  );
+  if (!vsCol.rows[0]) {
+    const migPath = path.resolve(__dirname, "../../db/05_start_order_vs.sql");
+    await pool.query(fs.readFileSync(migPath, "utf8"));
+    console.log("Migración start_order_vs aplicada");
+  }
 }

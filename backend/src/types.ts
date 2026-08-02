@@ -78,6 +78,12 @@ export interface PartCsvSlot {
   parsed: ParsedCsv;
 }
 
+/** One VS matchup in the start-order overlay (pilot numbers). */
+export interface StartOrderVsPair {
+  a: string;
+  b: string;
+}
+
 export interface TestPart {
   id: string;
   name: string;
@@ -88,6 +94,8 @@ export interface TestPart {
   combinedScoring?: CombinedScoring;
   /** Expected laps when combinedScoring is laps; null = indeterminate */
   expectedLaps?: number | null;
+  /** VS pairs for Orden de salida overlay */
+  startOrderVs?: StartOrderVsPair[];
   csvs: PartCsvSlot[];
 }
 

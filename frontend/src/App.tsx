@@ -3,6 +3,7 @@ import { EventsPage } from "./pages/EventsPage";
 import { EventDetailPage } from "./pages/EventDetailPage";
 import { PublicBoardPage } from "./pages/PublicBoardPage";
 import { OverlayPage } from "./pages/OverlayPage";
+import { StartOrderOverlayPage } from "./overlays/redbull/StartOrderOverlay";
 
 export default function App() {
   const location = useLocation();
@@ -12,6 +13,7 @@ export default function App() {
   if (isOverlay) {
     return (
       <Routes>
+        <Route path="/overlay/:id/orden-salida" element={<StartOrderOverlayPage />} />
         <Route path="/overlay/:id" element={<OverlayPage />} />
       </Routes>
     );
